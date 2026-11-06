@@ -1,0 +1,48 @@
+# Minimal local Supabase configuration for Decarby Solar (Phase 3A).
+# Requires the Supabase CLI: https://supabase.com/docs/guides/cli
+
+project_id = "decarby-solar-game"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[local_smtp]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+enable_signup = true
+# Required for optional online nicknames without email registration.
+enable_anonymous_sign_ins = true
+
+[auth.email]
+# Replaces deprecated auth.email.enable_signup (removed in CLI v4).
+enabled = false
+enable_confirmations = false
+
+[functions.start-game-attempt]
+verify_jwt = true
+
+[functions.submit-game-attempt]
+verify_jwt = true
+
+# Phase 3B notes (do not auto-deploy from the agent):
+# 1) npx.cmd supabase db push --dry-run --remote
+# 2) npx.cmd supabase db push --remote
+# 3) npx.cmd supabase functions deploy start-game-attempt --remote
+# 4) npx.cmd supabase functions deploy submit-game-attempt --remote
