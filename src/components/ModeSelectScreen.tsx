@@ -1,4 +1,4 @@
-import { Clock3, Landmark, ArrowLeft, Trophy, UserRound } from 'lucide-react'
+import { Award, Clock3, Landmark, ArrowLeft, Trophy, UserRound } from 'lucide-react'
 import type { GameMode } from '../types/game'
 import { SoundToggle } from './SoundToggle'
 
@@ -9,6 +9,7 @@ type ModeSelectScreenProps = {
   onBack: () => void
   onOnlineProfile: () => void
   onSolarChampions: () => void
+  onRewardCentre: () => void
   timeAttackAvailable: boolean
 }
 
@@ -19,6 +20,7 @@ export function ModeSelectScreen({
   onBack,
   onOnlineProfile,
   onSolarChampions,
+  onRewardCentre,
   timeAttackAvailable,
 }: ModeSelectScreenProps) {
   return (
@@ -60,6 +62,10 @@ export function ModeSelectScreen({
       </div>
 
       <div className="level-select-actions mode-select-actions">
+        <button type="button" className="btn btn-ghost" onClick={onRewardCentre}>
+          <Award size={16} aria-hidden />
+          Reward Centre
+        </button>
         <button type="button" className="btn btn-ghost" onClick={onSolarChampions}>
           <Trophy size={16} aria-hidden />
           Solar Champions

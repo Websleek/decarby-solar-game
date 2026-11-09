@@ -132,6 +132,7 @@ export type OnlineSubmissionState =
       verifiedStars: number
       verifiedCoveragePercent: number
       verifiedDurationMs: number
+      newlyEarnedAchievements?: readonly string[]
     }>
   | Readonly<{ status: 'rejected'; message: string }>
   | Readonly<{ status: 'unable_to_connect'; message: string }>
@@ -150,6 +151,7 @@ export type ScreenId =
   | 'modeSelect'
   | 'onlineProfile'
   | 'solarChampions'
+  | 'rewardCentre'
   | 'levelSelect'
   | 'gameplay'
   | 'levelComplete'

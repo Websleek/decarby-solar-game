@@ -76,6 +76,15 @@ export function LevelCompleteScreen({
 
       <OnlineSubmissionBanner state={onlineSubmission} />
 
+      {onlineSubmission.status === 'verified' &&
+        (onlineSubmission.newlyEarnedAchievements?.length ?? 0) > 0 && (
+          <div className="result-achievement-summary" role="status">
+            <Award size={16} aria-hidden />
+            Verified badges earned this run:{' '}
+            {onlineSubmission.newlyEarnedAchievements!.length}
+          </div>
+        )}
+
       <div className="stars" aria-label={`${result.stars} stars`}>
         {[1, 2, 3].map((n) => (
           <span key={n} className={`star ${shownStars >= n ? 'earned' : ''}`} aria-hidden="true">

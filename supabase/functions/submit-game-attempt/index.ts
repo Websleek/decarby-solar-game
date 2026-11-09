@@ -6,6 +6,10 @@ import {
   sanitizeActions,
   validateReplay,
 } from '../_shared/verification/index.ts'
+import {
+  awardAchievementsForPlayer,
+  invalidPlacementCountForSubmit,
+} from '../_shared/achievements/server.ts'
 import { corsHeaders, jsonResponse, publicError } from '../_shared/cors.ts'
 import { createServiceClient, createUserClient } from '../_shared/supabase.ts'
 
@@ -52,7 +56,7 @@ Deno.serve(async (req) => {
 
     const { data: profile } = await admin
       .from('player_profiles')
-      .select('id, moderation_status')
+      .select('id, moderation_status, public_nickname')
       .eq('user_id', user.id)
       .maybeSingle()
     if (!profile || profile.moderation_status !== 'active') {
@@ -73,6 +77,21 @@ Deno.serve(async (req) => {
       return publicError(404, 'not_found', 'Attempt not found.')
     }
     if (existing.status === 'verified') {
+      let newlyEarned: string[] = []
+      try {
+        const awardResult = await awardAchievementsForPlayer(admin, {
+          playerId: profile.id,
+          publicNickname: profile.public_nickname ?? null,
+          sourceAttemptId: attemptId,
+          sourceRecordId: existing.verified_record_id,
+        })
+        newlyEarned = [...awardResult.newlyEarned]
+      } catch (awardError) {
+        console.error(
+          'idempotent achievement award failed',
+          awardError instanceof Error ? awardError.message : awardError,
+        )
+      }
       return jsonResponse({
         ok: true,
         status: 'verified',
@@ -81,6 +100,7 @@ Deno.serve(async (req) => {
         verifiedCoveragePercent: existing.verified_coverage_percent,
         verifiedDurationMs: existing.verified_duration_ms,
         verifiedRecordId: existing.verified_record_id,
+        newlyEarnedAchievements: newlyEarned,
         idempotent: true,
       })
     }
@@ -268,9 +288,13 @@ Deno.serve(async (req) => {
       .update({ verification_status: 'verified' })
       .eq('id', submission.id)
 
+    const invalidPlacements = invalidPlacementCountForSubmit(actions, true)
+
     const { data: existingVerified } = await admin
       .from('verified_game_records')
-      .select('id, verified_score, verified_duration_ms')
+      .select(
+        'id, verified_score, verified_duration_ms, verified_stars, verified_invalid_placements',
+      )
       .eq('player_id', profile.id)
       .eq('level_id', locked.level_id)
       .eq('level_version_id', locked.level_version_id)
@@ -288,6 +312,9 @@ Deno.serve(async (req) => {
           game_mode: locked.game_mode,
           verified_score: replay.score,
           verified_duration_ms: serverDurationMs,
+          verified_stars: replay.stars,
+          verified_coverage_percent: replay.coveragePercent,
+          verified_invalid_placements: invalidPlacements,
           verified_at: submittedAt.toISOString(),
         })
         .select('id')
@@ -304,20 +331,37 @@ Deno.serve(async (req) => {
         locked.game_mode === 'classic'
           ? replay.score > existingVerified.verified_score
           : serverDurationMs < existingVerified.verified_duration_ms
+
+      const nextStars =
+        locked.game_mode === 'classic'
+          ? Math.max(Number(existingVerified.verified_stars ?? 0), replay.stars)
+          : replay.stars
+      const nextInvalid =
+        locked.game_mode === 'classic'
+          ? existingVerified.verified_invalid_placements === null
+            ? invalidPlacements
+            : Math.min(Number(existingVerified.verified_invalid_placements), Number(invalidPlacements))
+          : invalidPlacements
+
+      const patch: Record<string, unknown> = {
+        verified_stars: nextStars,
+        verified_coverage_percent: replay.coveragePercent,
+        verified_invalid_placements: nextInvalid,
+      }
       if (shouldReplace) {
-        const { error: updateError } = await admin
-          .from('verified_game_records')
-          .update({
-            verified_score: replay.score,
-            verified_duration_ms: serverDurationMs,
-            verified_at: submittedAt.toISOString(),
-          })
-          .eq('id', existingVerified.id)
-        if (updateError) {
-          console.error('verified update failed', updateError.message)
-          await reject(admin, attemptId, 'verify_write_failed')
-          return publicError(500, 'server_error', 'Could not store verified record.')
-        }
+        patch.verified_score = replay.score
+        patch.verified_duration_ms = serverDurationMs
+        patch.verified_at = submittedAt.toISOString()
+      }
+
+      const { error: updateError } = await admin
+        .from('verified_game_records')
+        .update(patch)
+        .eq('id', existingVerified.id)
+      if (updateError) {
+        console.error('verified update failed', updateError.message)
+        await reject(admin, attemptId, 'verify_write_failed')
+        return publicError(500, 'server_error', 'Could not store verified record.')
       }
     }
 
@@ -336,6 +380,22 @@ Deno.serve(async (req) => {
       })
       .eq('id', attemptId)
 
+    let newlyEarned: string[] = []
+    try {
+      const awardResult = await awardAchievementsForPlayer(admin, {
+        playerId: profile.id,
+        publicNickname: profile.public_nickname ?? null,
+        sourceAttemptId: attemptId,
+        sourceRecordId: verifiedRecordId,
+      })
+      newlyEarned = [...awardResult.newlyEarned]
+    } catch (awardError) {
+      console.error(
+        'achievement award failed',
+        awardError instanceof Error ? awardError.message : awardError,
+      )
+    }
+
     return jsonResponse({
       ok: true,
       status: 'verified',
@@ -344,6 +404,7 @@ Deno.serve(async (req) => {
       verifiedCoveragePercent: replay.coveragePercent,
       verifiedDurationMs: serverDurationMs,
       verifiedRecordId: verifiedRecordId,
+      newlyEarnedAchievements: newlyEarned,
       idempotent: false,
     })
   } catch (error) {

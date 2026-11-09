@@ -35,6 +35,8 @@ export type PuzzleEngine = {
   getActionLog(): readonly GameAction[]
   clearActionLog(): void
   recordCompleteAction(): void
+  /** Count of invalid_place actions recorded in the current online attempt log. */
+  getInvalidPlacementCount(): number
   selectPiece(pieceId: string | null): void
   rotateSelected(): Rotation | null
   rotatePiece(pieceId: string): Rotation | null
@@ -146,6 +148,10 @@ export function createPuzzleEngine(
       pushAction(nextAction({ kind: 'complete' }))
     },
 
+    getInvalidPlacementCount() {
+      return actionLog.reduce((sum, action) => (action.kind === 'invalid_place' ? sum + 1 : sum), 0)
+    },
+
     selectPiece(pieceId) {
       if (pieceId === null) {
         selectedPieceId = null
@@ -210,7 +216,17 @@ export function createPuzzleEngine(
       }
 
       const preview = canPlacePiece(level, working, piece, origin)
-      if (!preview.valid) return false
+      if (!preview.valid) {
+        pushAction(
+          nextAction({
+            kind: 'invalid_place',
+            pieceId,
+            origin,
+            rotation: piece.rotation,
+          }),
+        )
+        return false
+      }
 
       // Record remove of previous placement so undo restores tray/prior spot.
       if (piece.origin !== null) {

@@ -24,6 +24,7 @@ export type SubmitAttemptResult =
       verifiedCoveragePercent: number
       verifiedDurationMs: number
       verifiedRecordId: string
+      newlyEarnedAchievements: readonly string[]
       idempotent?: boolean
     }>
   | Readonly<{
@@ -102,6 +103,9 @@ export const competitiveAttemptService = {
     try {
       const data = await invokeFunction<Record<string, unknown>>('submit-game-attempt', input)
       if (data?.ok === true && data.status === 'verified') {
+        const newlyEarned = Array.isArray(data.newlyEarnedAchievements)
+          ? data.newlyEarnedAchievements.map(String)
+          : []
         return {
           ok: true,
           status: 'verified',
@@ -110,6 +114,7 @@ export const competitiveAttemptService = {
           verifiedCoveragePercent: Number(data.verifiedCoveragePercent),
           verifiedDurationMs: Number(data.verifiedDurationMs),
           verifiedRecordId: String(data.verifiedRecordId),
+          newlyEarnedAchievements: newlyEarned,
           idempotent: Boolean(data.idempotent),
         }
       }

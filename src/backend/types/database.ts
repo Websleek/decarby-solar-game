@@ -42,7 +42,21 @@ export type VerifiedGameRecordRow = {
   game_mode: GameModeDb
   verified_score: number
   verified_duration_ms: number
+  verified_stars: number | null
+  verified_coverage_percent: number | null
+  verified_invalid_placements: number | null
   verified_at: string
+}
+
+export type PlayerAchievementRow = {
+  id: string
+  player_id: string
+  achievement_id: string
+  earned_at: string
+  source_attempt_id: string | null
+  source_record_id: string | null
+  audit: Record<string, unknown>
+  created_at: string
 }
 
 export type PublicPlayerProfile = Readonly<{
@@ -131,7 +145,32 @@ export type Database = {
           game_mode: GameModeDb
           verified_score: number
           verified_duration_ms: number
+          verified_stars?: number | null
+          verified_coverage_percent?: number | null
+          verified_invalid_placements?: number | null
           verified_at?: string
+        }
+        Update: {
+          verified_score?: number
+          verified_duration_ms?: number
+          verified_stars?: number | null
+          verified_coverage_percent?: number | null
+          verified_invalid_placements?: number | null
+          verified_at?: string
+        }
+        Relationships: []
+      }
+      player_achievements: {
+        Row: PlayerAchievementRow
+        Insert: {
+          id?: string
+          player_id: string
+          achievement_id: string
+          earned_at?: string
+          source_attempt_id?: string | null
+          source_record_id?: string | null
+          audit?: Record<string, unknown>
+          created_at?: string
         }
         Update: never
         Relationships: []
@@ -207,6 +246,29 @@ export type Database = {
       leaderboard_speed_available: {
         Args: Record<string, never>
         Returns: boolean
+      }
+      award_player_achievement: {
+        Args: {
+          p_player_id: string
+          p_achievement_id: string
+          p_source_attempt_id?: string | null
+          p_source_record_id?: string | null
+          p_audit?: Record<string, unknown>
+        }
+        Returns: {
+          achievement_id: string
+          earned_at: string
+          inserted: boolean
+        }[]
+      }
+      list_my_achievements: {
+        Args: Record<string, never>
+        Returns: {
+          achievement_id: string
+          earned_at: string
+          source_attempt_id: string | null
+          source_record_id: string | null
+        }[]
       }
     }
     Enums: {

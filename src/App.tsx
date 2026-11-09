@@ -4,6 +4,12 @@ import { HowToPlayScreen } from './components/HowToPlayScreen'
 import { ModeSelectScreen } from './components/ModeSelectScreen'
 import { OnlineProfileScreen } from './components/OnlineProfileScreen'
 import { SolarChampionsScreen } from './components/SolarChampionsScreen'
+import { RewardCentreScreen } from './components/RewardCentreScreen'
+import {
+  AchievementToastHost,
+  type AchievementToastItem,
+} from './components/AchievementToastHost'
+import { ACHIEVEMENT_BY_ID, type VerifiedAchievementId } from '../shared/achievements/registry'
 import { LevelSelectScreen } from './components/LevelSelectScreen'
 import { GameplayScreen } from './components/GameplayScreen'
 import { LevelCompleteScreen } from './components/LevelCompleteScreen'
@@ -46,6 +52,7 @@ export default function App() {
   const [onlineSubmission, setOnlineSubmission] = useState<OnlineSubmissionState>({
     status: 'idle',
   })
+  const [achievementToasts, setAchievementToasts] = useState<AchievementToastItem[]>([])
 
   useEffect(() => {
     void localProgressService.load().then(setProgress)
@@ -109,7 +116,20 @@ export default function App() {
           verifiedStars: outcome.verifiedStars,
           verifiedCoveragePercent: outcome.verifiedCoveragePercent,
           verifiedDurationMs: outcome.verifiedDurationMs,
+          newlyEarnedAchievements: outcome.newlyEarnedAchievements,
         })
+        const fresh = outcome.newlyEarnedAchievements.filter(
+          (id): id is VerifiedAchievementId => id in ACHIEVEMENT_BY_ID,
+        )
+        if (fresh.length > 0) {
+          setAchievementToasts((prev) => [
+            ...prev,
+            ...fresh.map((achievementId) => ({
+              id: `${achievementId}-${crypto.randomUUID()}`,
+              achievementId,
+            })),
+          ])
+        }
       } else if (outcome.status === 'unable_to_connect') {
         setOnlineSubmission({
           status: 'unable_to_connect',
@@ -272,6 +292,7 @@ export default function App() {
           onBack={() => setScreen('welcome')}
           onOnlineProfile={() => setScreen('onlineProfile')}
           onSolarChampions={() => setScreen('solarChampions')}
+          onRewardCentre={() => setScreen('rewardCentre')}
           timeAttackAvailable={timeAttackAvailable}
         />
       )}
@@ -289,6 +310,16 @@ export default function App() {
           soundEnabled={soundEnabled}
           onToggleSound={() => void toggleSound()}
           onBack={() => setScreen('modeSelect')}
+        />
+      )}
+
+      {screen === 'rewardCentre' && progress && (
+        <RewardCentreScreen
+          progress={progress}
+          soundEnabled={soundEnabled}
+          onToggleSound={() => void toggleSound()}
+          onBack={() => setScreen('modeSelect')}
+          onOnlineProfile={() => setScreen('onlineProfile')}
         />
       )}
 
@@ -349,6 +380,14 @@ export default function App() {
           onHome={() => setScreen('welcome')}
         />
       )}
+
+      <AchievementToastHost
+        queue={achievementToasts}
+        soundEnabled={soundEnabled}
+        onDismiss={(id) =>
+          setAchievementToasts((prev) => prev.filter((item) => item.id !== id))
+        }
+      />
     </div>
   )
 }

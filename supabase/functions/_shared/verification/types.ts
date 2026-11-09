@@ -44,6 +44,14 @@ export type GameAction =
       rotation: Rotation
       clientAtMs: number
     }>
+  | Readonly<{
+      seq: number
+      kind: 'invalid_place'
+      pieceId: string
+      origin: GridCoord
+      rotation: Rotation
+      clientAtMs: number
+    }>
   | Readonly<{ seq: number; kind: 'remove'; pieceId: string; clientAtMs: number }>
   | Readonly<{ seq: number; kind: 'undo'; clientAtMs: number }>
   | Readonly<{ seq: number; kind: 'complete'; clientAtMs: number }>

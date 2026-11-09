@@ -27,6 +27,12 @@ export type {
   SubmitAttemptResult,
   SubmissionStatus,
 } from './services/competitiveAttempts'
+export { achievementService } from './services/achievements'
+export type {
+  AchievementCatalogEntry,
+  AchievementSyncResult,
+  EarnedAchievement,
+} from './services/achievements'
 export { competitiveLeaderboardService } from './services/leaderboard'
 export type {
   CompetitiveLeaderboardService,

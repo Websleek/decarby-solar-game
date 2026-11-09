@@ -65,7 +65,7 @@ export function sanitizeActions(raw: unknown): GameAction[] | null {
       actions.push({ seq: i, kind, pieceId, rotation, clientAtMs })
       continue
     }
-    if (kind === 'place') {
+    if (kind === 'place' || kind === 'invalid_place') {
       const pieceId = (item as { pieceId?: unknown }).pieceId
       const origin = (item as { origin?: unknown }).origin
       const rotation = (item as { rotation?: unknown }).rotation
@@ -154,6 +154,12 @@ export function validateReplay(
       } else {
         updatePiece(action.pieceId, { rotation: action.rotation })
       }
+      continue
+    }
+
+    if (action.kind === 'invalid_place') {
+      // Telemetry only — does not mutate board state. Used for perfect_fit awards.
+      if (!findPiece(action.pieceId)) return fail('invalid_piece', 'Unknown piece in invalid placement.')
       continue
     }
 
