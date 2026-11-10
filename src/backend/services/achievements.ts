@@ -53,6 +53,8 @@ function mapEarned(rows: unknown): EarnedAchievement[] {
       earned_at?: string
       source_attempt_id?: string | null
       source_record_id?: string | null
+      // Defensive: never treat award-attempt metadata as an unlock.
+      inserted?: boolean
     }
     const id = typed.achievement_id
     if (!id || !(id in ACHIEVEMENT_BY_ID) || !typed.earned_at) continue

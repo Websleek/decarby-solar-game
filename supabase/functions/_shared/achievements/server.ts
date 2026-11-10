@@ -17,6 +17,13 @@ type AdminClient = {
   rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>
 }
 
+export type PersistedAchievementRow = Readonly<{
+  achievement_id: string
+  earned_at: string
+  source_attempt_id: string | null
+  source_record_id: string | null
+}>
+
 export async function loadPlayerAchievementSnapshot(
   admin: AdminClient,
   playerId: string,
@@ -53,8 +60,6 @@ export async function loadPlayerAchievementSnapshot(
         levelId: typed.level_id,
         verifiedStars: typed.verified_stars,
         verifiedInvalidPlacements: typed.verified_invalid_placements,
-        // Historic classic rows without action telemetry still prove completion,
-        // but first_spark prefers an explicit placement when available.
         hasSuccessfulPlacement: true,
       })
     } else if (typed.game_mode === 'timeAttack') {
@@ -95,6 +100,19 @@ export async function loadPlayerAchievementSnapshot(
   return { classicRecords, timeAttackRecords, leaderboardStandings }
 }
 
+function parseAwardRpcRow(data: unknown): { inserted: boolean; earnedAt: string } | null {
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row || typeof row !== 'object') return null
+  const typed = row as { achievement_id?: unknown; earned_at?: unknown; inserted?: unknown }
+  if (typeof typed.achievement_id !== 'string' || typeof typed.earned_at !== 'string') {
+    return null
+  }
+  return {
+    inserted: Boolean(typed.inserted),
+    earnedAt: typed.earned_at,
+  }
+}
+
 export async function awardAchievementsForPlayer(
   admin: AdminClient,
   input: {
@@ -124,18 +142,42 @@ export async function awardAchievementsForPlayer(
       })
       if (error) {
         console.error('award_player_achievement failed', achievementId, error)
-        return { inserted: false, earnedAt: new Date().toISOString() }
+        return { ok: false as const, error: 'rpc_error' }
       }
-      const row = Array.isArray(data) ? data[0] : data
-      const typed = row as { achievement_id?: string; earned_at?: string; inserted?: boolean }
-      return {
-        inserted: Boolean(typed?.inserted),
-        earnedAt: typed?.earned_at ?? new Date().toISOString(),
+      const parsed = parseAwardRpcRow(data)
+      if (!parsed) {
+        console.error('award_player_achievement returned no persisted row', achievementId, data)
+        return { ok: false as const, error: 'not_persisted' }
       }
+      return { ok: true as const, inserted: parsed.inserted, earnedAt: parsed.earnedAt }
     },
   })
 
   return { awards, newlyEarned: newlyInsertedAwards(awards) }
+}
+
+/** Load persisted awards for the authenticated caller (same auth.uid() as awarding profile). */
+export async function listPersistedAchievementsForUser(
+  userClient: AdminClient,
+): Promise<{ rows: PersistedAchievementRow[]; error: string | null }> {
+  const { data, error } = await userClient.rpc('list_my_achievements')
+  if (error) {
+    console.error('list_my_achievements failed', error)
+    return { rows: [], error: 'list_failed' }
+  }
+  if (!Array.isArray(data)) return { rows: [], error: null }
+  return {
+    rows: data.map((row) => {
+      const typed = row as PersistedAchievementRow
+      return {
+        achievement_id: String(typed.achievement_id),
+        earned_at: String(typed.earned_at),
+        source_attempt_id: typed.source_attempt_id ?? null,
+        source_record_id: typed.source_record_id ?? null,
+      }
+    }),
+    error: null,
+  }
 }
 
 export function invalidPlacementCountForSubmit(

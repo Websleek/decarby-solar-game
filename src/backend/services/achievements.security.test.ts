@@ -36,3 +36,21 @@ describe('phase 4 achievement security contract', () => {
     expect(sql).toContain('NULL means telemetry was not recorded')
   })
 })
+
+describe('phase 4 achievement retrieval fix contract', () => {
+  const fixSql = readFileSync(
+    resolve(process.cwd(), 'supabase/migrations/20260323120000_phase4_achievement_retrieval_fix.sql'),
+    'utf8',
+  )
+
+  it('restores service_role SELECT after PUBLIC revoke and keeps award execute service_role-only', () => {
+    expect(fixSql).toContain('grant select on table public.player_achievements to service_role')
+    expect(fixSql).toContain(
+      'grant execute on function public.award_player_achievement(uuid, text, uuid, uuid, jsonb)\n  to service_role',
+    )
+    expect(fixSql).not.toContain(
+      'grant execute on function public.award_player_achievement(uuid, text, uuid, uuid, jsonb) to anon',
+    )
+    expect(fixSql).toContain('no persisted row; caller must not invent an unlock')
+  })
+})

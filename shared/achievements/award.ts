@@ -16,12 +16,16 @@ export type AwardRow = Readonly<{
   reason?: string
 }>
 
+export type AwardSinkResult =
+  | Readonly<{ ok: true; inserted: boolean; earnedAt: string }>
+  | Readonly<{ ok: false; error: string }>
+
 export type AwardSink = (input: {
   achievementId: VerifiedAchievementId
   sourceAttemptId: string | null
   sourceRecordId: string | null
   audit: Record<string, unknown>
-}) => Promise<{ inserted: boolean; earnedAt: string }>
+}) => Promise<AwardSinkResult>
 
 export type PlayerVerifiedSnapshot = Readonly<{
   classicRecords: readonly VerifiedClassicFact[]
@@ -29,7 +33,11 @@ export type PlayerVerifiedSnapshot = Readonly<{
   leaderboardStandings: readonly LeaderboardStandingFact[]
 }>
 
-/** Idempotently award every currently eligible achievement for a player. */
+/**
+ * Idempotently award every currently eligible achievement for a player.
+ * Only returns rows that were confirmed persisted by the award sink.
+ * Eligibility alone never appears as an unlock.
+ */
 export async function syncPlayerAchievements(options: {
   snapshot: PlayerVerifiedSnapshot
   sourceAttemptId?: string | null
@@ -53,6 +61,7 @@ export async function syncPlayerAchievements(options: {
         evaluatedAt: new Date().toISOString(),
       },
     })
+    if (!result.ok) continue
     awarded.push({
       achievementId,
       inserted: result.inserted,
@@ -85,4 +94,18 @@ export function classicFactFromAttempt(input: {
 
 export function newlyInsertedAwards(rows: readonly AwardRow[]): readonly VerifiedAchievementId[] {
   return rows.filter((row) => row.inserted).map((row) => row.achievementId)
+}
+
+/** Build unlock catalog entries only from persisted award rows. */
+export function catalogUnlocksFromPersisted(
+  earned: readonly { achievementId: string; earnedAt: string }[],
+  catalogIds: readonly string[],
+): ReadonlyMap<string, string> {
+  const map = new Map<string, string>()
+  for (const row of earned) {
+    if (!catalogIds.includes(row.achievementId)) continue
+    if (!row.earnedAt) continue
+    map.set(row.achievementId, row.earnedAt)
+  }
+  return map
 }

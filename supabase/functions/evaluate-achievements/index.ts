@@ -1,4 +1,7 @@
-import { awardAchievementsForPlayer } from '../_shared/achievements/server.ts'
+import {
+  awardAchievementsForPlayer,
+  listPersistedAchievementsForUser,
+} from '../_shared/achievements/server.ts'
 import { listAchievements } from '../_shared/achievements/registry.ts'
 import { corsHeaders, jsonResponse, publicError } from '../_shared/cors.ts'
 import { createServiceClient, createUserClient } from '../_shared/supabase.ts'
@@ -34,8 +37,7 @@ Deno.serve(async (req) => {
       return publicError(403, 'profile_required', 'Online profile required.')
     }
 
-    // Backfill never invents telemetry: perfect_fit stays locked until
-    // verified_invalid_placements is populated by a post-telemetry verify.
+    // Award with service_role SECURITY DEFINER helper (idempotent).
     const awardResult = await awardAchievementsForPlayer(admin, {
       playerId: profile.id,
       publicNickname: profile.public_nickname ?? null,
@@ -43,19 +45,21 @@ Deno.serve(async (req) => {
       sourceRecordId: null,
     })
 
-    const { data: earnedRows } = await admin
-      .from('player_achievements')
-      .select('achievement_id, earned_at, source_attempt_id, source_record_id')
-      .eq('player_id', profile.id)
-      .order('earned_at', { ascending: true })
+    // Retrieve with the same authenticated identity (auth.uid()), never invent unlocks
+    // from eligibility-only award attempts.
+    const persisted = await listPersistedAchievementsForUser(userClient)
+    if (persisted.error) {
+      return publicError(500, 'list_failed', 'Could not load persisted achievements.')
+    }
 
     return jsonResponse({
       ok: true,
       mode,
       catalog: listAchievements(),
-      earned: Array.isArray(earnedRows) ? earnedRows : [],
+      earned: persisted.rows,
       newlyEarnedAchievements: awardResult.newlyEarned,
       awards: awardResult.awards,
+      playerId: profile.id,
     })
   } catch (error) {
     console.error('evaluate-achievements failed', error)
