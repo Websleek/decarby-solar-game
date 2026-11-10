@@ -59,6 +59,8 @@ Deno.serve(async (req) => {
       earned: persisted.rows,
       newlyEarnedAchievements: awardResult.newlyEarned,
       awards: awardResult.awards,
+      // Surface persistence failures explicitly — never imply unlocks from eligibility alone.
+      awardFailures: awardResult.failures,
       playerId: profile.id,
     })
   } catch (error) {

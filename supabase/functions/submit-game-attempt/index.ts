@@ -78,6 +78,7 @@ Deno.serve(async (req) => {
     }
     if (existing.status === 'verified') {
       let newlyEarned: string[] = []
+      let awardFailures: unknown[] = []
       try {
         const awardResult = await awardAchievementsForPlayer(admin, {
           playerId: profile.id,
@@ -86,11 +87,13 @@ Deno.serve(async (req) => {
           sourceRecordId: existing.verified_record_id,
         })
         newlyEarned = [...awardResult.newlyEarned]
+        awardFailures = [...awardResult.failures]
       } catch (awardError) {
         console.error(
           'idempotent achievement award failed',
           awardError instanceof Error ? awardError.message : awardError,
         )
+        awardFailures = [{ error: 'exception', message: String(awardError) }]
       }
       return jsonResponse({
         ok: true,
@@ -101,6 +104,7 @@ Deno.serve(async (req) => {
         verifiedDurationMs: existing.verified_duration_ms,
         verifiedRecordId: existing.verified_record_id,
         newlyEarnedAchievements: newlyEarned,
+        awardFailures,
         idempotent: true,
       })
     }
@@ -381,6 +385,7 @@ Deno.serve(async (req) => {
       .eq('id', attemptId)
 
     let newlyEarned: string[] = []
+    let awardFailures: unknown[] = []
     try {
       const awardResult = await awardAchievementsForPlayer(admin, {
         playerId: profile.id,
@@ -389,11 +394,13 @@ Deno.serve(async (req) => {
         sourceRecordId: verifiedRecordId,
       })
       newlyEarned = [...awardResult.newlyEarned]
+      awardFailures = [...awardResult.failures]
     } catch (awardError) {
       console.error(
         'achievement award failed',
         awardError instanceof Error ? awardError.message : awardError,
       )
+      awardFailures = [{ error: 'exception', message: String(awardError) }]
     }
 
     return jsonResponse({
@@ -405,6 +412,7 @@ Deno.serve(async (req) => {
       verifiedDurationMs: serverDurationMs,
       verifiedRecordId: verifiedRecordId,
       newlyEarnedAchievements: newlyEarned,
+      awardFailures,
       idempotent: false,
     })
   } catch (error) {

@@ -113,6 +113,13 @@ function parseAwardRpcRow(data: unknown): { inserted: boolean; earnedAt: string 
   }
 }
 
+export type AwardFailure = Readonly<{
+  achievementId: VerifiedAchievementId
+  error: string
+  code?: string
+  message?: string
+}>
+
 export async function awardAchievementsForPlayer(
   admin: AdminClient,
   input: {
@@ -121,12 +128,17 @@ export async function awardAchievementsForPlayer(
     sourceAttemptId?: string | null
     sourceRecordId?: string | null
   },
-): Promise<{ awards: AwardRow[]; newlyEarned: VerifiedAchievementId[] }> {
+): Promise<{
+  awards: AwardRow[]
+  newlyEarned: VerifiedAchievementId[]
+  failures: AwardFailure[]
+}> {
   const snapshot = await loadPlayerAchievementSnapshot(
     admin,
     input.playerId,
     input.publicNickname,
   )
+  const failures: AwardFailure[] = []
 
   const awards = await syncPlayerAchievements({
     snapshot,
@@ -141,19 +153,49 @@ export async function awardAchievementsForPlayer(
         p_audit: audit,
       })
       if (error) {
-        console.error('award_player_achievement failed', achievementId, error)
+        const errObj = error as { code?: string; message?: string }
+        console.error('award_player_achievement failed', {
+          achievementId,
+          playerId: input.playerId,
+          code: errObj.code,
+          message: errObj.message,
+          error,
+        })
+        failures.push({
+          achievementId,
+          error: 'rpc_error',
+          code: errObj.code,
+          message: errObj.message,
+        })
         return { ok: false as const, error: 'rpc_error' }
       }
       const parsed = parseAwardRpcRow(data)
       if (!parsed) {
-        console.error('award_player_achievement returned no persisted row', achievementId, data)
+        console.error('award_player_achievement returned no persisted row', {
+          achievementId,
+          playerId: input.playerId,
+          data,
+        })
+        failures.push({
+          achievementId,
+          error: 'not_persisted',
+          message: 'RPC returned no persisted award row',
+        })
         return { ok: false as const, error: 'not_persisted' }
       }
       return { ok: true as const, inserted: parsed.inserted, earnedAt: parsed.earnedAt }
     },
   })
 
-  return { awards, newlyEarned: newlyInsertedAwards(awards) }
+  if (failures.length > 0) {
+    console.error('achievement award failures', {
+      playerId: input.playerId,
+      failureCount: failures.length,
+      failures,
+    })
+  }
+
+  return { awards, newlyEarned: newlyInsertedAwards(awards), failures }
 }
 
 /** Load persisted awards for the authenticated caller (same auth.uid() as awarding profile). */
