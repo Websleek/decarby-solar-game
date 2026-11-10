@@ -8,7 +8,11 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:staging:audit": "node scripts/staging/audit-migration-deps.mjs",
+    "test:staging:security": "node scripts/staging/integration-security.mjs",
+    "staging:cli-runbook": "node scripts/staging/cli-runbook.mjs",
+    "final-c:deploy-runbook": "node scripts/final-c-deploy-runbook.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",

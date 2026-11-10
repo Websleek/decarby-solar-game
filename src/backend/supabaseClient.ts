@@ -4,6 +4,9 @@ import type { Database } from './types/database'
 
 export type DecarbySupabaseClient = SupabaseClient<Database>
 
+/** Browser auth persistence key (Supabase JS). Cleared on New Player reset. */
+export const AUTH_STORAGE_KEY = 'decarby-solar-auth'
+
 let client: DecarbySupabaseClient | null = null
 let initializedForKey: string | null = null
 
@@ -28,16 +31,22 @@ export function getSupabaseClient(): DecarbySupabaseClient | null {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,
-      storageKey: 'decarby-solar-auth',
+      storageKey: AUTH_STORAGE_KEY,
     },
   })
   initializedForKey = key
   return client
 }
 
-export function resetSupabaseClientForTests(): void {
+/** Drop the singleton so the next call creates a fresh auth client/session. */
+export function resetSupabaseClient(): void {
   client = null
   initializedForKey = null
+}
+
+/** @deprecated Prefer resetSupabaseClient — kept for existing tests. */
+export function resetSupabaseClientForTests(): void {
+  resetSupabaseClient()
 }
 
 export function hasSupabaseClient(): boolean {

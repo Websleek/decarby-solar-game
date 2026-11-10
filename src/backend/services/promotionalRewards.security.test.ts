@@ -125,8 +125,8 @@ describe('phase 4C.1 promotional reward service foundation', () => {
     }
   })
 
-  it('refuses claim requests while Phase 4C.1 claims remain disabled', () => {
-    expect(() => requestPromotionalClaim()).toThrow(/disabled in Phase 4C\.1/i)
+  it('refuses public claim requests (live claiming remains disabled)', () => {
+    expect(() => requestPromotionalClaim()).toThrow(/Public promotional reward claims are disabled/i)
     expect(() => promotionalRewardService.requestPromotionalClaim()).toThrow(/disabled/i)
   })
 

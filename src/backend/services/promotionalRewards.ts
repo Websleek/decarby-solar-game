@@ -1,18 +1,33 @@
 import {
+  createInternalClaimHarness,
+  type InternalClaimHarness,
+} from '../../../shared/rewards/claimHarness'
+import {
+  planClaimRequest,
+  planClaimTransition,
+  type ClaimantIdentity,
+  type ClaimInventorySnapshot,
+  type ClaimRequestOutcome,
+  type ClaimTransitionOutcome,
+  type ClaimWorkflowGate,
+  type ServerEligibilityFacts,
+} from '../../../shared/rewards/claimWorkflow'
+import {
   evaluateRewardEligibility,
   type EligibilityEvaluationInput,
   type EligibilityEvaluationResult,
   type RewardCampaign,
   type RewardDefinition,
 } from '../../../shared/rewards/index'
+import type { ClaimStatus } from '../../../shared/rewards/types'
 import {
   DEMO_REWARD_CAMPAIGN,
   listDemoRewardDefinitions,
 } from '../../../shared/rewards/registry'
 
 /**
- * Phase 4C.1 promotional rewards foundation.
- * Eligibility evaluation only — never creates claims, vouchers, or discounts.
+ * Phase 4C.1/4C.2 promotional rewards.
+ * Public claiming remains disabled. Internal claim workflow is service-role / harness only.
  */
 export type PromotionalEligibilityFacts = Readonly<{
   verifiedAchievementIds: readonly string[]
@@ -27,6 +42,15 @@ export type PromotionalEligibilityView = Readonly<{
   campaign: RewardCampaign
   result: EligibilityEvaluationResult
 }>
+
+export type {
+  ClaimantIdentity,
+  ClaimRequestOutcome,
+  ClaimTransitionOutcome,
+  ClaimWorkflowGate,
+  InternalClaimHarness,
+  ServerEligibilityFacts,
+}
 
 export function listInactiveDemoRewards(): readonly RewardDefinition[] {
   return listDemoRewardDefinitions()
@@ -81,13 +105,47 @@ export function evaluateDemoPromotionalEligibility(
 }
 
 /**
- * Intentionally unimplemented in Phase 4C.1.
- * Public claim / redemption endpoints must not be enabled yet.
+ * Public/frontend claim path — always disabled.
+ * No live claiming, codes, or Reward Centre claim button integration in 4C.2.
  */
 export function requestPromotionalClaim(): never {
   throw new Error(
-    'Promotional reward claims are disabled in Phase 4C.1. No claim endpoint is available.',
+    'Public promotional reward claims are disabled. No public claim endpoint is available.',
   )
+}
+
+/**
+ * Pure claim planning for trusted service-role callers.
+ * Does not write to the database; pair with request_player_reward_claim RPC.
+ */
+export function planTrustedClaimRequest(input: {
+  gate: ClaimWorkflowGate
+  identity: ClaimantIdentity
+  campaign: RewardCampaign
+  reward: RewardDefinition
+  serverFacts: ServerEligibilityFacts
+  inventory: ClaimInventorySnapshot
+  clientForgedProgress?: unknown
+}): ClaimRequestOutcome {
+  return planClaimRequest(input)
+}
+
+export function planTrustedClaimTransition(input: {
+  claim: Parameters<typeof planClaimTransition>[0]['claim']
+  to: ClaimStatus
+  reason?: string
+}): ClaimTransitionOutcome {
+  return planClaimTransition(input)
+}
+
+/**
+ * Explicitly gated in-memory harness for developers/tests.
+ * Never points at production campaigns. Never issues vouchers.
+ */
+export function createPromotionalClaimTestHarness(
+  gate: ClaimWorkflowGate = { internalClaimsAllowed: true },
+): InternalClaimHarness {
+  return createInternalClaimHarness(gate)
 }
 
 export const promotionalRewardService = {
@@ -96,4 +154,7 @@ export const promotionalRewardService = {
   evaluatePromotionalEligibility,
   evaluateDemoPromotionalEligibility,
   requestPromotionalClaim,
+  planTrustedClaimRequest,
+  planTrustedClaimTransition,
+  createPromotionalClaimTestHarness,
 }

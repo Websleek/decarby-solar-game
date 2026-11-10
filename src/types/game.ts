@@ -148,15 +148,18 @@ export type PuzzleSnapshot = Readonly<{
 export type ScreenId =
   | 'welcome'
   | 'howToPlay'
+  | 'promoNickname'
   | 'modeSelect'
   | 'onlineProfile'
   | 'solarChampions'
   | 'rewardCentre'
+  | 'operatorClaims'
   | 'levelSelect'
   | 'gameplay'
   | 'levelComplete'
   | 'timeAttackResults'
   | 'campaignComplete'
+  | 'voucherDetails'
 
 export type SolutionPlacement = Readonly<{
   typeId: PieceTypeId

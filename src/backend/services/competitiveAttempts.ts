@@ -38,6 +38,8 @@ export type StartAttemptInput = Readonly<{
   levelId: string
   gameMode: GameMode
   clientNonce?: string
+  /** Optional Final A promotional campaign run association. */
+  campaignRunId?: string
 }>
 
 export type SubmitAttemptInput = Readonly<{

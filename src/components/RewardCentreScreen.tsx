@@ -12,7 +12,9 @@ import {
   achievementService,
   isBackendConfigured,
   isBackendError,
+  playerClaimsService,
   type AchievementCatalogEntry,
+  type PlayerClaimSummary,
 } from '../backend'
 import { CAMPAIGN_LEVEL_IDS } from '../../shared/achievements/registry'
 import { listLocalLevels } from '../levels'
@@ -63,6 +65,8 @@ export function RewardCentreScreen({
   const [catalog, setCatalog] = useState<readonly AchievementCatalogEntry[]>(() =>
     achievementService.previewFromLocalProgress(progress),
   )
+  const [claims, setClaims] = useState<readonly PlayerClaimSummary[]>([])
+  const [claimsMessage, setClaimsMessage] = useState<string | null>(null)
 
   const levels = listLocalLevels()
   const totalStars = CAMPAIGN_LEVEL_IDS.reduce(
@@ -91,8 +95,21 @@ export function RewardCentreScreen({
       const synced = await achievementService.sync(progress)
       setCatalog(synced.catalog)
       setLoadState('ready')
+      try {
+        const mine = await playerClaimsService.listMine()
+        setClaims(mine)
+        setClaimsMessage(
+          mine.length === 0
+            ? 'No promotional claim history yet. Public claiming stays disabled.'
+            : null,
+        )
+      } catch {
+        setClaims([])
+        setClaimsMessage('Claim history unavailable until your online profile is ready.')
+      }
     } catch (error) {
       setCatalog(localCatalog)
+      setClaims([])
       if (isBackendError(error) && (error.code === 'unauthenticated' || error.code === 'not_configured')) {
         setLoadState('offline')
         setMessage(
@@ -250,10 +267,34 @@ export function RewardCentreScreen({
       <aside className="reward-promo" aria-label="Promotional rewards">
         <p className="reward-promo-kicker">Coming later</p>
         <p>
-          <strong>Promotional rewards coming soon.</strong> No discount codes, claims or payments
-          are available in this version.
+          <strong>Promotional rewards coming soon.</strong> No discount codes, claim buttons or
+          payments are available in this version.
         </p>
       </aside>
+
+      <section className="reward-claim-history" aria-label="Your promotional claim history">
+        <h2>Your claim history</h2>
+        <p className="muted">
+          Read-only status for your own promotional claims. Claiming remains disabled — there is no
+          Claim Reward action here.
+        </p>
+        {claimsMessage && <p className="reward-status">{claimsMessage}</p>}
+        {claims.length > 0 && (
+          <ul className="reward-claim-list">
+            {claims.map((claim) => (
+              <li key={claim.claimId}>
+                <strong>{claim.rewardTitle}</strong>
+                <span>
+                  {claim.status}
+                  {claim.decidedAt
+                    ? ` · decided ${formatEarnedAt(claim.decidedAt) ?? claim.decidedAt}`
+                    : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <div className="level-select-actions mode-select-actions">
         <button type="button" className="btn btn-ghost" onClick={onOnlineProfile}>

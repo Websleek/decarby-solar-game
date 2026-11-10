@@ -38,6 +38,11 @@ export interface ProgressService {
   setTutorialCompleted(completed: boolean): Promise<PlayerProgress>
   setSelectedLevel(levelId: string): Promise<PlayerProgress>
   setPreferredGameMode(mode: GameMode): Promise<PlayerProgress>
+  /** Event-tablet New Player: wipe local campaign progress; keep device prefs. */
+  resetForNewPlayer(options?: {
+    preserveSound?: boolean
+    preserveTutorial?: boolean
+  }): Promise<PlayerProgress>
 }
 
 export interface ScoreSubmission {

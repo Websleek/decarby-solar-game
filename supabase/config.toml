@@ -41,6 +41,12 @@ verify_jwt = true
 [functions.submit-game-attempt]
 verify_jwt = true
 
+[functions.claim-campaign-voucher]
+verify_jwt = true
+
+[functions.resend-campaign-voucher-email]
+verify_jwt = true
+
 # Phase 3B notes (do not auto-deploy from the agent):
 # 1) npx.cmd supabase db push --dry-run --remote
 # 2) npx.cmd supabase db push --remote

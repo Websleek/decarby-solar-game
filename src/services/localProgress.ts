@@ -379,7 +379,20 @@ export const localProgressService: ProgressService = {
     writeStorage(next)
     return next
   },
+
+  async resetForNewPlayer(options) {
+    const current = readStorage()
+    const next = emptyProgress()
+    next.soundEnabled =
+      options?.preserveSound === false ? true : current.soundEnabled
+    next.tutorialCompleted =
+      options?.preserveTutorial === false ? false : current.tutorialCompleted
+    writeStorage(next)
+    return next
+  },
 }
+
+export const LOCAL_PROGRESS_STORAGE_KEY = STORAGE_KEY
 
 export const ACHIEVEMENTS = {
   'solar-starter': {

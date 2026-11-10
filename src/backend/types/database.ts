@@ -478,6 +478,152 @@ export type Database = {
           source_record_id: string | null
         }[]
       }
+      reward_claim_transition_allowed: {
+        Args: {
+          p_from: RewardClaimStatus
+          p_to: RewardClaimStatus
+        }
+        Returns: boolean
+      }
+      request_player_reward_claim: {
+        Args: {
+          p_player_id: string
+          p_reward_id: string
+          p_adult_confirmed: boolean
+          p_consent_granted: boolean
+          p_eligibility_snapshot?: Record<string, unknown>
+          p_actor_role?: string
+        }
+        Returns: {
+          claim_id: string | null
+          claim_status: RewardClaimStatus | null
+          inserted: boolean
+          rejection_code: string | null
+          rejection_reason: string | null
+        }[]
+      }
+      transition_player_reward_claim: {
+        Args: {
+          p_claim_id: string
+          p_to_status: RewardClaimStatus
+          p_reason?: string | null
+          p_actor_role?: string
+        }
+        Returns: {
+          claim_id: string | null
+          from_status: RewardClaimStatus | null
+          to_status: RewardClaimStatus | null
+          ok: boolean
+          rejection_code: string | null
+          rejection_reason: string | null
+        }[]
+      }
+      is_active_staff_operator: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+      record_my_promotional_consent: {
+        Args: {
+          p_adult_self_attested: boolean
+          p_terms_accepted: boolean
+          p_terms_version: string
+          p_marketing_opt_in?: boolean
+        }
+        Returns: {
+          consent_id: string
+          terms_version: string
+          recorded_at: string
+          marketing_opt_in: boolean
+        }[]
+      }
+      list_my_reward_claims: {
+        Args: Record<string, never>
+        Returns: {
+          claim_id: string
+          reward_id: string
+          reward_slug: string
+          reward_title: string
+          campaign_id: string
+          status: RewardClaimStatus
+          created_at: string
+          updated_at: string
+          decided_at: string | null
+        }[]
+      }
+      operator_list_pending_claims: {
+        Args: { p_limit?: number }
+        Returns: {
+          claim_id: string
+          player_id: string
+          public_nickname: string
+          reward_id: string
+          reward_slug: string
+          reward_title: string
+          campaign_id: string
+          status: RewardClaimStatus
+          created_at: string
+          eligibility_snapshot: Record<string, unknown>
+        }[]
+      }
+      operator_get_claim_detail: {
+        Args: { p_claim_id: string }
+        Returns: {
+          claim_id: string
+          player_id: string
+          public_nickname: string
+          reward_id: string
+          reward_slug: string
+          reward_title: string
+          campaign_id: string
+          status: RewardClaimStatus
+          claim_policy: string
+          eligibility_snapshot: Record<string, unknown>
+          created_at: string
+          updated_at: string
+          decided_at: string | null
+        }[]
+      }
+      operator_list_claim_audits: {
+        Args: { p_claim_id: string }
+        Returns: {
+          audit_id: string
+          event_type: RewardAuditEventType
+          actor_role: string
+          payload: Record<string, unknown>
+          created_at: string
+        }[]
+      }
+      operator_review_claim: {
+        Args: {
+          p_claim_id: string
+          p_decision: string
+          p_reason?: string | null
+        }
+        Returns: {
+          claim_id: string | null
+          from_status: RewardClaimStatus | null
+          to_status: RewardClaimStatus | null
+          ok: boolean
+          rejection_code: string | null
+          rejection_reason: string | null
+        }[]
+      }
+      finalise_leaderboard_snapshot: {
+        Args: {
+          p_board: string
+          p_period_label: string
+          p_source_fingerprint: string
+          p_level_id?: string | null
+          p_period_start?: string | null
+          p_period_end?: string | null
+          p_limit?: number
+        }
+        Returns: {
+          snapshot_id: string
+          inserted: boolean
+          entry_count: number
+        }[]
+      }
     }
     Enums: {
       game_mode: GameModeDb

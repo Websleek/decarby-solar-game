@@ -10,6 +10,9 @@ type ModeSelectScreenProps = {
   onOnlineProfile: () => void
   onSolarChampions: () => void
   onRewardCentre: () => void
+  /** Only rendered when the signed-in account is an active staff operator. */
+  onOperatorClaims?: () => void
+  showOperatorClaims?: boolean
   timeAttackAvailable: boolean
 }
 
@@ -21,6 +24,8 @@ export function ModeSelectScreen({
   onOnlineProfile,
   onSolarChampions,
   onRewardCentre,
+  onOperatorClaims,
+  showOperatorClaims = false,
   timeAttackAvailable,
 }: ModeSelectScreenProps) {
   return (
@@ -74,6 +79,11 @@ export function ModeSelectScreen({
           <UserRound size={16} aria-hidden />
           Online profile (optional)
         </button>
+        {showOperatorClaims && onOperatorClaims && (
+          <button type="button" className="btn btn-ghost" onClick={onOperatorClaims}>
+            Staff claim review
+          </button>
+        )}
         <button type="button" className="btn btn-secondary" onClick={onBack}>
           <ArrowLeft size={16} aria-hidden />
           Back

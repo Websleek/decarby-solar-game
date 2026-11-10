@@ -47,11 +47,35 @@ export type {
   SpeedLeaderboardEntry,
   WeeklyLeaderboardEntry,
 } from './services/leaderboard'
-export { promotionalRewardService } from './services/promotionalRewards'
+export {
+  promotionalRewardService,
+  createPromotionalClaimTestHarness,
+  planTrustedClaimRequest,
+  planTrustedClaimTransition,
+  requestPromotionalClaim,
+} from './services/promotionalRewards'
 export type {
+  ClaimantIdentity,
+  ClaimRequestOutcome,
+  ClaimTransitionOutcome,
+  ClaimWorkflowGate,
+  InternalClaimHarness,
   PromotionalEligibilityFacts,
   PromotionalEligibilityView,
+  ServerEligibilityFacts,
 } from './services/promotionalRewards'
+export { playerClaimsService } from './services/claims'
+export type { PlayerClaimSummary } from './services/claims'
+export { operatorClaimsService } from './services/operatorClaims'
+export type {
+  OperatorClaimDetail,
+  OperatorPendingClaim,
+} from './services/operatorClaims'
+export { promotionalConsentService } from './services/promotionalConsent'
+export type { RecordedPromotionalConsent } from './services/promotionalConsent'
+export { leaderboardSnapshotService } from './services/leaderboardSnapshots'
+export type { SnapshotFinaliseResult } from './services/leaderboardSnapshots'
+export { promotionalCampaignService } from './services/promotionalCampaign'
 export type {
   GameLevelVersion,
   PlayerProfile,

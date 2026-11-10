@@ -1,18 +1,55 @@
 import type { Session, User } from '@supabase/supabase-js'
 import { isBackendConfigured } from '../config'
 import { BackendError, toBackendError } from '../errors'
-import { getSupabaseClient } from '../supabaseClient'
+import {
+  AUTH_STORAGE_KEY,
+  getSupabaseClient,
+  resetSupabaseClient,
+} from '../supabaseClient'
 
 export type AuthState =
   | Readonly<{ kind: 'offline' }>
   | Readonly<{ kind: 'signedOut' }>
   | Readonly<{ kind: 'anonymous'; userId: string; session: Session }>
 
+export type SharedDeviceSessionEnd = Readonly<{
+  kind: 'signedOut' | 'offline'
+  /** True when auth storage was force-cleared after a sign-out failure. */
+  forceCleared: boolean
+  previousUserIdRedacted: string
+}>
+
 export interface IdentityService {
   getAuthState(): Promise<AuthState>
   ensureAnonymousSession(): Promise<AuthState>
   signOut(): Promise<AuthState>
+  /**
+   * Event-tablet / New Player: end the anonymous JWT and clear auth persistence.
+   * Never throws in a way that leaves the previous JWT usable; force-clears on failure.
+   * Does not delete server profiles, claims, vouchers, or leaderboards.
+   */
+  endSharedDeviceSession(): Promise<SharedDeviceSessionEnd>
   onAuthStateChange(listener: (state: AuthState) => void): () => void
+}
+
+function clearAuthPersistence(): void {
+  try {
+    if (typeof localStorage === 'undefined') return
+    localStorage.removeItem(AUTH_STORAGE_KEY)
+    // Defensive: remove any legacy supabase auth mirrors for this origin.
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i)
+      if (!key) continue
+      if (key === AUTH_STORAGE_KEY || (key.startsWith('sb-') && key.includes('auth'))) {
+        keys.push(key)
+      }
+    }
+    for (const key of keys) localStorage.removeItem(key)
+  } catch {
+    // Private mode / blocked storage — client reset still drops in-memory session.
+  }
+  resetSupabaseClient()
 }
 
 function offlineState(): AuthState {
@@ -85,6 +122,38 @@ export const identityService: IdentityService = {
       return { kind: 'signedOut' }
     } catch (error) {
       throw toBackendError(error, 'Could not sign out of the online session.')
+    }
+  },
+
+  async endSharedDeviceSession() {
+    if (!isBackendConfigured()) {
+      clearAuthPersistence()
+      return {
+        kind: 'offline',
+        forceCleared: true,
+        previousUserIdRedacted: redactUserId('offline'),
+      }
+    }
+
+    let previousUserId = 'player'
+    let forceCleared = false
+    try {
+      const prior = await this.getAuthState()
+      if (prior.kind === 'anonymous') {
+        previousUserId = prior.userId
+      }
+      await this.signOut()
+      clearAuthPersistence()
+    } catch {
+      // Sign-out failed — never leave the previous JWT available for the next player.
+      forceCleared = true
+      clearAuthPersistence()
+    }
+
+    return {
+      kind: 'signedOut',
+      forceCleared,
+      previousUserIdRedacted: redactUserId(previousUserId),
     }
   },
 

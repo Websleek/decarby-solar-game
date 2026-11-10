@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     const { data: existing } = await admin
       .from('game_attempts')
       .select(
-        'id, status, verified_score, verified_stars, verified_coverage_percent, verified_duration_ms, rejection_code, verified_record_id',
+        'id, status, verified_score, verified_stars, verified_coverage_percent, verified_duration_ms, rejection_code, verified_record_id, campaign_run_id, level_id, level_version_id',
       )
       .eq('id', attemptId)
       .eq('player_id', profile.id)
@@ -369,7 +369,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    await admin
+    const { data: lockedAttempt } = await admin
       .from('game_attempts')
       .update({
         status: 'verified',
@@ -383,6 +383,39 @@ Deno.serve(async (req) => {
         rejection_code: null,
       })
       .eq('id', attemptId)
+      .select('campaign_run_id, level_id, level_version_id')
+      .maybeSingle()
+
+    // Attach verified Classic result to the promotional campaign run when present.
+    // Ignore failures if Final A migration is not yet applied.
+    if (lockedAttempt?.campaign_run_id && locked.game_mode === 'classic') {
+      try {
+        const { data: versionRow } = await admin
+          .from('game_level_versions')
+          .select('version')
+          .eq('id', lockedAttempt.level_version_id)
+          .maybeSingle()
+        await admin.from('promotional_campaign_run_levels').upsert(
+          {
+            run_id: lockedAttempt.campaign_run_id,
+            level_id: lockedAttempt.level_id,
+            level_version: versionRow?.version ?? null,
+            status: 'verified',
+            verified_stars: replay.stars,
+            verified_score: replay.score,
+            verified_attempt_id: attemptId,
+            verified_record_id: verifiedRecordId,
+            updated_at: submittedAt.toISOString(),
+          },
+          { onConflict: 'run_id,level_id' },
+        )
+      } catch (attachError) {
+        console.error(
+          'campaign run attach skipped',
+          attachError instanceof Error ? attachError.message : attachError,
+        )
+      }
+    }
 
     let newlyEarned: string[] = []
     let awardFailures: unknown[] = []
@@ -411,6 +444,7 @@ Deno.serve(async (req) => {
       verifiedCoveragePercent: replay.coveragePercent,
       verifiedDurationMs: serverDurationMs,
       verifiedRecordId: verifiedRecordId,
+      campaignRunId: lockedAttempt?.campaign_run_id ?? null,
       newlyEarnedAchievements: newlyEarned,
       awardFailures,
       idempotent: false,

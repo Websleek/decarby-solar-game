@@ -25,11 +25,19 @@ Deno.serve(async (req) => {
     const levelId = (body as { levelId?: unknown }).levelId
     const gameMode = (body as { gameMode?: unknown }).gameMode
     const clientNonce = (body as { clientNonce?: unknown }).clientNonce
+    const campaignRunId = (body as { campaignRunId?: unknown }).campaignRunId
     if (typeof levelId !== 'string' || (gameMode !== 'classic' && gameMode !== 'timeAttack')) {
       return publicError(400, 'invalid_request', 'levelId and gameMode are required.')
     }
     if (clientNonce !== undefined && (typeof clientNonce !== 'string' || clientNonce.length > 64)) {
       return publicError(400, 'invalid_request', 'Invalid client nonce.')
+    }
+    if (
+      campaignRunId !== undefined &&
+      campaignRunId !== null &&
+      (typeof campaignRunId !== 'string' || campaignRunId.length < 8)
+    ) {
+      return publicError(400, 'invalid_request', 'Invalid campaignRunId.')
     }
 
     const userClient = createUserClient(authHeader)
@@ -137,6 +145,25 @@ Deno.serve(async (req) => {
       }
     }
 
+    let resolvedCampaignRunId: string | null = null
+    if (typeof campaignRunId === 'string') {
+      const { data: run } = await admin
+        .from('promotional_campaign_runs')
+        .select('id, player_id, status')
+        .eq('id', campaignRunId)
+        .maybeSingle()
+      if (!run || run.player_id !== profile.id) {
+        return publicError(403, 'campaign_run_forbidden', 'Campaign run not found for this player.')
+      }
+      if (run.status !== 'in_progress' && run.status !== 'awaiting_verification') {
+        return publicError(409, 'campaign_run_closed', 'This campaign run is no longer accepting levels.')
+      }
+      if (gameMode !== 'classic') {
+        return publicError(400, 'invalid_request', 'Promotional campaign runs require Classic mode.')
+      }
+      resolvedCampaignRunId = run.id
+    }
+
     const inventoryPieceIds = buildInventoryPieceIds(approved)
     const expiresAt = new Date(Date.now() + ATTEMPT_TTL_MS).toISOString()
     const { data: attempt, error: insertError } = await admin
@@ -151,8 +178,9 @@ Deno.serve(async (req) => {
         inventory_piece_ids: inventoryPieceIds,
         expires_at: expiresAt,
         client_nonce: typeof clientNonce === 'string' ? clientNonce : null,
+        campaign_run_id: resolvedCampaignRunId,
       })
-      .select('id, expires_at, inventory_piece_ids, level_version_id, configuration_hash')
+      .select('id, expires_at, inventory_piece_ids, level_version_id, configuration_hash, campaign_run_id')
       .single()
 
     if (insertError || !attempt) {
@@ -167,6 +195,7 @@ Deno.serve(async (req) => {
       configurationHash: attempt.configuration_hash,
       inventoryPieceIds: attempt.inventory_piece_ids,
       expiresAt: attempt.expires_at,
+      campaignRunId: attempt.campaign_run_id ?? null,
       idempotent: false,
     })
   } catch (error) {
