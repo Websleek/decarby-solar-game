@@ -47,6 +47,11 @@ export type {
   SpeedLeaderboardEntry,
   WeeklyLeaderboardEntry,
 } from './services/leaderboard'
+export { promotionalRewardService } from './services/promotionalRewards'
+export type {
+  PromotionalEligibilityFacts,
+  PromotionalEligibilityView,
+} from './services/promotionalRewards'
 export type {
   GameLevelVersion,
   PlayerProfile,

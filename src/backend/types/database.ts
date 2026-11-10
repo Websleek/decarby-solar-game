@@ -1,8 +1,37 @@
-/** Generated-style Database types for Phase 3A schema. */
+/** Generated-style Database types for Phase 3A–4C.1 schema. */
 
 export type GameModeDb = 'classic' | 'timeAttack'
 export type VerificationStatus = 'pending' | 'rejected' | 'verified'
 export type ModerationStatus = 'active' | 'flagged' | 'restricted'
+export type RewardCampaignLifecycle =
+  | 'draft'
+  | 'scheduled'
+  | 'active'
+  | 'paused'
+  | 'expired'
+  | 'archived'
+export type RewardPublishingStatus = 'draft' | 'published' | 'archived'
+export type RewardTypeDb =
+  | 'consultation_benefit'
+  | 'fixed_discount'
+  | 'percentage_discount'
+  | 'voucher'
+  | 'special_offer'
+export type RewardClaimStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'redeemed'
+  | 'expired'
+  | 'cancelled'
+export type RewardAuditEventType =
+  | 'eligibility_checked'
+  | 'claim_requested'
+  | 'claim_approved'
+  | 'claim_rejected'
+  | 'claim_redeemed'
+  | 'claim_expired'
+  | 'campaign_updated'
 
 export type PlayerProfileRow = {
   id: string
@@ -56,6 +85,71 @@ export type PlayerAchievementRow = {
   source_attempt_id: string | null
   source_record_id: string | null
   audit: Record<string, unknown>
+  created_at: string
+}
+
+export type RewardCampaignRow = {
+  id: string
+  slug: string
+  title: string
+  description: string
+  lifecycle_status: RewardCampaignLifecycle
+  starts_at: string | null
+  ends_at: string | null
+  public_catalog: boolean
+  default_one_claim_per_player_reward: boolean
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export type RewardDefinitionRow = {
+  id: string
+  campaign_id: string
+  slug: string
+  title: string
+  short_description: string
+  reward_type: RewardTypeDb
+  illustrative_amount_cents: number | null
+  currency: 'AUD'
+  percentage_basis_points: number | null
+  eligibility: Record<string, unknown>
+  publishing_status: RewardPublishingStatus
+  public_catalog: boolean
+  claims_enabled: boolean
+  display_order: number
+  per_player_limit: number
+  capacity_limit: number | null
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export type PlayerRewardClaimRow = {
+  id: string
+  player_id: string
+  reward_id: string
+  campaign_id: string
+  status: RewardClaimStatus
+  claim_policy: 'one_per_player_reward' | 'campaign_controlled'
+  eligibility_snapshot: Record<string, unknown>
+  redemption_metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+  decided_at: string | null
+  redeemed_at: string | null
+  expires_at: string | null
+}
+
+export type RewardAuditEventRow = {
+  id: string
+  event_type: RewardAuditEventType
+  campaign_id: string | null
+  reward_id: string | null
+  claim_id: string | null
+  player_id: string | null
+  actor_role: 'system' | 'service_role' | 'player' | 'admin'
+  payload: Record<string, unknown>
   created_at: string
 }
 
@@ -175,6 +269,120 @@ export type Database = {
         Update: never
         Relationships: []
       }
+      reward_campaigns: {
+        Row: RewardCampaignRow
+        Insert: {
+          id?: string
+          slug: string
+          title: string
+          description?: string
+          lifecycle_status?: RewardCampaignLifecycle
+          starts_at?: string | null
+          ends_at?: string | null
+          public_catalog?: boolean
+          default_one_claim_per_player_reward?: boolean
+          metadata?: Record<string, unknown>
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          title?: string
+          description?: string
+          lifecycle_status?: RewardCampaignLifecycle
+          starts_at?: string | null
+          ends_at?: string | null
+          public_catalog?: boolean
+          default_one_claim_per_player_reward?: boolean
+          metadata?: Record<string, unknown>
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reward_definitions: {
+        Row: RewardDefinitionRow
+        Insert: {
+          id?: string
+          campaign_id: string
+          slug: string
+          title: string
+          short_description?: string
+          reward_type: RewardTypeDb
+          illustrative_amount_cents?: number | null
+          currency?: 'AUD'
+          percentage_basis_points?: number | null
+          eligibility: Record<string, unknown>
+          publishing_status?: RewardPublishingStatus
+          public_catalog?: boolean
+          claims_enabled?: boolean
+          display_order?: number
+          per_player_limit?: number
+          capacity_limit?: number | null
+          metadata?: Record<string, unknown>
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          title?: string
+          short_description?: string
+          reward_type?: RewardTypeDb
+          illustrative_amount_cents?: number | null
+          percentage_basis_points?: number | null
+          eligibility?: Record<string, unknown>
+          publishing_status?: RewardPublishingStatus
+          public_catalog?: boolean
+          claims_enabled?: boolean
+          display_order?: number
+          per_player_limit?: number
+          capacity_limit?: number | null
+          metadata?: Record<string, unknown>
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      player_reward_claims: {
+        Row: PlayerRewardClaimRow
+        Insert: {
+          id?: string
+          player_id: string
+          reward_id: string
+          campaign_id: string
+          status?: RewardClaimStatus
+          claim_policy?: 'one_per_player_reward' | 'campaign_controlled'
+          eligibility_snapshot?: Record<string, unknown>
+          redemption_metadata?: Record<string, unknown>
+          created_at?: string
+          updated_at?: string
+          decided_at?: string | null
+          redeemed_at?: string | null
+          expires_at?: string | null
+        }
+        Update: {
+          status?: RewardClaimStatus
+          eligibility_snapshot?: Record<string, unknown>
+          redemption_metadata?: Record<string, unknown>
+          updated_at?: string
+          decided_at?: string | null
+          redeemed_at?: string | null
+          expires_at?: string | null
+        }
+        Relationships: []
+      }
+      reward_audit_events: {
+        Row: RewardAuditEventRow
+        Insert: {
+          id?: string
+          event_type: RewardAuditEventType
+          campaign_id?: string | null
+          reward_id?: string | null
+          claim_id?: string | null
+          player_id?: string | null
+          actor_role?: 'system' | 'service_role' | 'player' | 'admin'
+          payload?: Record<string, unknown>
+          created_at?: string
+        }
+        Update: never
+        Relationships: []
+      }
     }
     Views: {
       public_player_profiles: {
@@ -275,6 +483,11 @@ export type Database = {
       game_mode: GameModeDb
       verification_status: VerificationStatus
       moderation_status: ModerationStatus
+      reward_campaign_lifecycle: RewardCampaignLifecycle
+      reward_publishing_status: RewardPublishingStatus
+      reward_type: RewardTypeDb
+      reward_claim_status: RewardClaimStatus
+      reward_audit_event_type: RewardAuditEventType
     }
     CompositeTypes: Record<string, never>
   }
