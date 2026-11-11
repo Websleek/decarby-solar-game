@@ -7,6 +7,9 @@
   /* Provisional: supplied as #FF5C; site CSS unavailable (403). Confirm before print collateral. */
   --brand-orange: #ff5c00;
   --brand-orange-soft: rgba(255, 92, 0, 0.16);
+  --brand-gradient: linear-gradient(135deg, #ed3363 0%, #c63bcf 48%, #6e3ce2 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #f04372 0%, #cf49d6 48%, #7a49ea 100%);
+  --brand-gradient-shadow: 0 10px 24px rgba(198, 59, 207, 0.34);
 
   --page-bg: #f8f7fc;
   --soft-purple: #f1ebfd;
@@ -91,7 +94,7 @@
   --shadow-md: 0 8px 20px rgba(36, 32, 57, 0.1);
   --shadow-lg: 0 16px 36px rgba(36, 32, 57, 0.14);
   --shadow: var(--shadow-md);
-  --shadow-primary: 0 8px 18px rgba(110, 60, 226, 0.28);
+  --shadow-primary: var(--brand-gradient-shadow);
 
   /* Motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -202,33 +205,39 @@ button:disabled {
   transform: translateY(1px) scale(0.98);
 }
 
+/* High-priority CTAs only — Play Now, Start challenge, Continue, Send, New Player, Next/Play */
 .btn-primary {
-  background: var(--brand-purple);
+  background: var(--brand-gradient);
   color: var(--white);
-  box-shadow: var(--shadow-primary);
-  border: 2px solid var(--brand-purple);
+  box-shadow: var(--brand-gradient-shadow);
+  border: 2px solid transparent;
   border-radius: var(--radius-lg);
   font-size: 1.05rem;
   padding: 0.85rem 1.6rem;
+  background-origin: border-box;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--brand-purple-deep);
-  border-color: var(--brand-purple-deep);
-  box-shadow: 0 10px 22px rgba(110, 60, 226, 0.34);
+  background: var(--brand-gradient-hover);
+  box-shadow: 0 12px 28px rgba(198, 59, 207, 0.42);
 }
 
 .btn-primary:active:not(:disabled) {
-  box-shadow: 0 4px 10px rgba(110, 60, 226, 0.24);
+  box-shadow: 0 5px 14px rgba(198, 59, 207, 0.28);
+}
+
+.btn-primary:focus-visible {
+  outline: 3px solid rgba(110, 60, 226, 0.55);
+  outline-offset: 3px;
 }
 
 .btn-primary:disabled {
-  background: #b7a6e8;
-  border-color: #b7a6e8;
+  background: linear-gradient(135deg, #f0a0b4 0%, #d9a0e0 48%, #b7a6e8 100%);
   color: rgba(255, 255, 255, 0.92);
   opacity: 1;
   filter: none;
   box-shadow: none;
+  cursor: not-allowed;
 }
 
 .btn-secondary {

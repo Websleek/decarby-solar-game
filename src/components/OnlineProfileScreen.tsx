@@ -140,7 +140,7 @@ export function OnlineProfileScreen({
         {configured && auth.kind !== 'anonymous' && (
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-secondary"
             disabled={busy}
             onClick={() => void enableOnline()}
           >
@@ -163,7 +163,7 @@ export function OnlineProfileScreen({
             <p className="field-hint">3–20 characters. Letters, numbers, spaces, - _ .</p>
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-secondary"
               disabled={busy}
               onClick={() => void saveNickname()}
             >

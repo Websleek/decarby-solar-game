@@ -380,7 +380,7 @@ export function GameplayScreen({
             )}
             <button
               type="button"
-              className="btn btn-accent btn-finish"
+              className="btn btn-primary btn-finish"
               disabled={!canFinish}
               onClick={() => (isTimeAttack ? finishTimeAttack() : finishClassic())}
             >
@@ -408,7 +408,7 @@ export function GameplayScreen({
               <button type="button" className="btn btn-ghost" onClick={() => setConfirmRestart(false)}>
                 Cancel
               </button>
-              <button type="button" className="btn btn-primary" onClick={handleRestart}>
+              <button type="button" className="btn btn-secondary" onClick={handleRestart}>
                 Restart
               </button>
             </div>

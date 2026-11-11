@@ -173,7 +173,7 @@ export function OperatorClaimsScreen({
                 <div className="operator-actions">
                   <button
                     type="button"
-                    className="btn btn-primary"
+                    className="btn btn-secondary"
                     disabled={busy || selected.claim.status !== 'pending'}
                     onClick={() => void review('approve')}
                   >
