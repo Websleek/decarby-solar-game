@@ -21,16 +21,30 @@ export function CampaignCompleteScreen({
       </p>
       <h1>Congratulations, Solar Champion!</h1>
       <p className="tagline">
-        Nice work, <strong>{view.nickname}</strong> — you powered every rooftop in this campaign run.
+        You powered every rooftop in this campaign run. Review your reward, then continue when you
+        are ready.
       </p>
 
-      <div className="result-card promo-reward-card">
-        <p className="promo-reward-kicker">Campaign stars</p>
-        <p className="promo-reward-stars">
-          You earned <strong>{view.totalStars}</strong> of <strong>15</strong> stars
-        </p>
-        <p className="promo-reward-score">Combined score: {view.totalScore.toLocaleString()}</p>
+      <p className="promo-player-chip" aria-label="Player nickname">
+        Player <strong>{view.nickname}</strong>
+      </p>
 
+      <div className="result-card promo-summary-card" aria-label="Campaign summary">
+        <div className="promo-stats-row">
+          <p className="promo-stat">
+            <span>Stars</span>
+            <strong>
+              {view.totalStars} / 15
+            </strong>
+          </p>
+          <p className="promo-stat">
+            <span>Combined score</span>
+            <strong>{view.totalScore.toLocaleString()}</strong>
+          </p>
+        </div>
+      </div>
+
+      <div className="result-card promo-reward-card">
         {view.rewardLabel ? (
           <div className="promo-reward-reveal" role="status">
             <Award size={22} aria-hidden />
@@ -50,39 +64,46 @@ export function CampaignCompleteScreen({
         )}
 
         <p className={`promo-verify ${view.serverVerified ? 'is-verified' : 'is-provisional'}`}>
-          {view.serverVerified ? <ShieldCheck size={16} aria-hidden /> : <ShieldAlert size={16} aria-hidden />}
-          {view.serverVerified ? 'Server verified campaign result' : 'Provisional / not fully verified'}
+          {view.serverVerified ? (
+            <ShieldCheck size={16} aria-hidden />
+          ) : (
+            <ShieldAlert size={16} aria-hidden />
+          )}
+          {view.serverVerified
+            ? 'Server verified campaign result'
+            : 'Provisional / not fully verified'}
         </p>
-        <p className="muted">{view.voucherEligibleMessaging}</p>
-        <p className="muted">
-          Discount subject to approved promotional terms. Continue only if you want to submit
-          adult contact details for a voucher.
-        </p>
+        <p className="muted promo-eligible-note">{view.voucherEligibleMessaging}</p>
       </div>
 
-      <ul className="promo-level-stars" aria-label="Stars by rooftop">
-        {view.run.levels.map((level) => (
-          <li key={level.levelId}>
-            <span>
-              L{level.levelNumber} {level.levelTitle}
-            </span>
-            <strong>
-              {level.stars == null ? '—' : `${'★'.repeat(level.stars)}${'☆'.repeat(3 - level.stars)}`}
-            </strong>
-            <em>{level.status}</em>
-          </li>
-        ))}
-      </ul>
+      <div className="promo-levels-panel">
+        <h2>Rooftop results</h2>
+        <ul className="promo-level-stars" aria-label="Stars by rooftop">
+          {view.run.levels.map((level) => (
+            <li key={level.levelId}>
+              <span>
+                L{level.levelNumber} {level.levelTitle}
+              </span>
+              <strong>
+                {level.stars == null
+                  ? '—'
+                  : `${'★'.repeat(level.stars)}${'☆'.repeat(3 - level.stars)}`}
+              </strong>
+              <em>{level.status}</em>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <div className="complete-actions">
         <button type="button" className="btn btn-primary" onClick={onContinuePlaceholder}>
           <ArrowRight size={16} aria-hidden />
           {view.nextStepLabel}
         </button>
-        <button type="button" className="btn btn-ghost" onClick={onExploreModes}>
+        <button type="button" className="btn btn-secondary" onClick={onExploreModes}>
           More ways to play
         </button>
-        <button type="button" className="btn btn-secondary" onClick={onHome}>
+        <button type="button" className="btn btn-tertiary" onClick={onHome}>
           <Home size={16} aria-hidden />
           Home
         </button>

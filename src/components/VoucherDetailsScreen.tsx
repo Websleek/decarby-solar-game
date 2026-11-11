@@ -107,18 +107,27 @@ export function VoucherDetailsScreen({
         </p>
         <h1>Voucher request received</h1>
         <p className="tagline">{result.message}</p>
+
         <div className="result-card voucher-success-card">
+          <p className="voucher-amount-hero">{formatAud(result.amountCents)}</p>
+          <div className="voucher-summary-grid" aria-label="Claim summary">
+            <div>
+              <span>Player</span>
+              <strong>{view.nickname}</strong>
+            </div>
+            <div>
+              <span>Stars</span>
+              <strong>
+                {view.totalStars} / 15
+              </strong>
+            </div>
+            <div>
+              <span>Status</span>
+              <strong>Processed</strong>
+            </div>
+          </div>
           <p>
             <ShieldCheck size={18} aria-hidden /> Your voucher request has been processed.
-          </p>
-          <p>
-            Player: <strong>{view.nickname}</strong>
-          </p>
-          <p>
-            Stars: <strong>{view.totalStars}</strong> / 15
-          </p>
-          <p>
-            Amount: <strong>{formatAud(result.amountCents)}</strong>
           </p>
           {(result.demo || !result.redeemable) && (
             <p className="voucher-demo-banner" role="status">
@@ -132,6 +141,7 @@ export function VoucherDetailsScreen({
             <p className="muted">Existing claim reused — no additional voucher was created.</p>
           )}
         </div>
+
         <div className="complete-actions voucher-terminal-actions">
           <button type="button" className="btn btn-primary" onClick={onNewPlayer}>
             <UserPlus size={16} aria-hidden />
@@ -141,7 +151,7 @@ export function VoucherDetailsScreen({
             <Trophy size={16} aria-hidden />
             View Leaderboard
           </button>
-          <button type="button" className="btn btn-ghost" onClick={onHome}>
+          <button type="button" className="btn btn-tertiary" onClick={onHome}>
             <Home size={16} aria-hidden />
             Home
           </button>
@@ -157,23 +167,29 @@ export function VoucherDetailsScreen({
       </p>
       <h1>Voucher details</h1>
       <p className="tagline">
-        Confirm your contact details to receive your campaign voucher. Children can keep playing
+        Enter adult contact details to request your campaign voucher. Children can keep playing
         without submitting commercial contact information.
       </p>
 
       <div className="result-card voucher-summary-card">
-        <p>
-          Player: <strong>{view.nickname}</strong>
-        </p>
-        <p>
-          Stars earned: <strong>{view.totalStars}</strong> / 15
-        </p>
-        <p>
-          Awarded discount:{' '}
-          <strong>{view.rewardAmountCents > 0 ? rewardLabel : 'Not eligible'}</strong>
-        </p>
+        <div className="voucher-summary-grid" aria-label="Campaign reward summary">
+          <div>
+            <span>Player</span>
+            <strong>{view.nickname}</strong>
+          </div>
+          <div>
+            <span>Stars</span>
+            <strong>
+              {view.totalStars} / 15
+            </strong>
+          </div>
+          <div>
+            <span>Discount</span>
+            <strong>{view.rewardAmountCents > 0 ? rewardLabel : 'Not eligible'}</strong>
+          </div>
+        </div>
         <p className="muted">
-          Discount amount is taken from your server-verified campaign result — not from this form.
+          Discount amount comes from your server-verified campaign result — not this form.
         </p>
       </div>
 
@@ -186,6 +202,7 @@ export function VoucherDetailsScreen({
             autoComplete="name"
             required
             maxLength={120}
+            placeholder="Jane Citizen"
             value={form.fullName}
             disabled={busy}
             onChange={(event) => update('fullName', event.target.value)}
@@ -218,6 +235,7 @@ export function VoucherDetailsScreen({
             autoComplete="email"
             required
             maxLength={320}
+            placeholder="you@example.com"
             value={form.email}
             disabled={busy}
             onChange={(event) => update('email', event.target.value)}
@@ -233,7 +251,8 @@ export function VoucherDetailsScreen({
             onChange={(event) => update('termsAccepted', event.target.checked)}
           />
           <span>
-            I agree to the Decarby promotional terms ({voucherClaimService.termsVersion}).
+            I agree to the Decarby promotional terms ({voucherClaimService.termsVersion}). An
+            approved public terms page is not linked yet.
           </span>
         </label>
 
@@ -273,7 +292,7 @@ export function VoucherDetailsScreen({
           </p>
         )}
 
-        <div className="complete-actions">
+        <div className="voucher-submit-stack">
           <button type="submit" className="btn btn-primary" disabled={busy || !canSubmit}>
             Send My Voucher
           </button>
@@ -281,7 +300,7 @@ export function VoucherDetailsScreen({
             <ArrowLeft size={16} aria-hidden />
             Back to results
           </button>
-          <button type="button" className="btn btn-ghost" onClick={onHome} disabled={busy}>
+          <button type="button" className="btn btn-tertiary" onClick={onHome} disabled={busy}>
             <Home size={16} aria-hidden />
             Home
           </button>
