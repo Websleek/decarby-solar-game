@@ -57,19 +57,19 @@ describe('contact validation', () => {
     if (form.ok) expect(form.value.phone).toBe('')
   })
 
-  it('requires consents and rejects invalid consent', () => {
+  it('requires promotional terms and records adult attestation honestly', () => {
     const missing = validateVoucherContactForm({
       fullName: 'Jane Citizen',
       phone: '0412345678',
       email: 'jane@example.com',
       termsAccepted: false,
-      adultSelfAttested: true,
+      adultSelfAttested: false,
       marketingOptIn: false,
       termsVersion: PROMOTIONAL_TERMS_VERSION,
     })
     expect(missing.ok).toBe(false)
 
-    const adult = validateVoucherContactForm({
+    const withoutAdultCheckbox = validateVoucherContactForm({
       fullName: 'Jane Citizen',
       phone: '0412345678',
       email: 'jane@example.com',
@@ -77,7 +77,10 @@ describe('contact validation', () => {
       adultSelfAttested: false,
       termsVersion: PROMOTIONAL_TERMS_VERSION,
     })
-    expect(adult.ok).toBe(false)
+    expect(withoutAdultCheckbox.ok).toBe(true)
+    if (withoutAdultCheckbox.ok) {
+      expect(withoutAdultCheckbox.value.adultSelfAttested).toBe(false)
+    }
 
     const ok = validateVoucherContactForm({
       fullName: 'Jane Citizen',

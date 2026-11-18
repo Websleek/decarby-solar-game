@@ -15,7 +15,6 @@ import {
   CAMPAIGN_LEVEL_IDS,
   type VerifiedAchievementId,
 } from '../shared/achievements/registry'
-import { LevelSelectScreen } from './components/LevelSelectScreen'
 import { GameplayScreen } from './components/GameplayScreen'
 import { LevelCompleteScreen } from './components/LevelCompleteScreen'
 import { TimeAttackResultsScreen } from './components/TimeAttackResultsScreen'
@@ -29,6 +28,12 @@ import {
   shouldConfirmResetBeforeFinish,
 } from './services/playerSessionReset'
 import { readCachedClaimResult } from './services/claimResultCache'
+import {
+  isCampaignLevelLocked,
+  nextIncompleteCampaignLevelId,
+  readPromoRunDraft,
+  writePromoRunDraft,
+} from './services/promoRunCache'
 import {
   getFirstLevel,
   getLevelById,
@@ -85,6 +90,26 @@ export default function App() {
   useEffect(() => {
     void localProgressService.load().then(setProgress)
   }, [])
+
+  // Recover interrupted event campaign after refresh.
+  useEffect(() => {
+    const draft = readPromoRunDraft()
+    if (!draft) return
+    setPromoRun(draft)
+    setPromoFlowActive(true)
+    const nextId = nextIncompleteCampaignLevelId(draft)
+    if (!nextId && draft.levels.every((l) => l.status === 'local_complete' || l.status === 'verified')) {
+      setScreen('campaignComplete')
+      return
+    }
+    if (nextId) {
+      setActiveLevelId(nextId)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (promoRun && promoFlowActive) writePromoRunDraft(promoRun)
+  }, [promoRun, promoFlowActive])
 
   useEffect(() => {
     if (!isBackendConfigured()) {
@@ -203,14 +228,23 @@ export default function App() {
   const startLevel = useCallback(
     async (levelId: string, mode: GameMode, options?: { campaignRunId?: string | null }) => {
       const current = await localProgressService.load()
-      if (mode === 'classic' && !isLevelUnlocked(current, levelId)) {
+      if (promoFlowActive && promoRun && isCampaignLevelLocked(promoRun, levelId)) {
+        // Completed rooftops are locked for this run — never replay.
+        const nextId = nextIncompleteCampaignLevelId(promoRun)
+        if (!nextId || nextId === levelId) {
+          setScreen('campaignComplete')
+          return
+        }
+        levelId = nextId
+      }
+      if (!promoFlowActive && mode === 'classic' && !isLevelUnlocked(current, levelId)) {
         setProgress(current)
-        setScreen('levelSelect')
+        setScreen('welcome')
         return
       }
-      if (mode === 'timeAttack' && !isTimeAttackLevelAvailable(current, levelId)) {
+      if (!promoFlowActive && mode === 'timeAttack' && !isTimeAttackLevelAvailable(current, levelId)) {
         setProgress(current)
-        setScreen('levelSelect')
+        setScreen('welcome')
         return
       }
       const level = getLevelById(levelId)
@@ -242,17 +276,17 @@ export default function App() {
   )
 
   const goToLevelSelect = useCallback(async () => {
+    // Event mode never exposes level select / mode hubs.
+    if (promoFlowActive) {
+      setOnlineSession(null)
+      setScreen('promoNickname')
+      return
+    }
     const current = progress ?? (await localProgressService.load())
     setProgress(current)
     setOnlineSession(null)
-    setScreen('levelSelect')
-  }, [progress])
-
-  const goToModeSelect = useCallback(async () => {
-    const current = progress ?? (await localProgressService.load())
-    setProgress(current)
-    setScreen('modeSelect')
-  }, [progress])
+    setScreen('welcome')
+  }, [progress, promoFlowActive])
 
   const handlePlay = useCallback(async () => {
     await unlockAudio()
@@ -403,15 +437,27 @@ export default function App() {
   }, [performNewPlayerReset, promoFlowActive, promoRun])
 
   const handleReplay = useCallback(() => {
+    // Event campaign: replays are disabled.
+    if (promoFlowActive) return
     void startLevel(activeLevelId, gameMode)
-  }, [activeLevelId, gameMode, startLevel])
+  }, [activeLevelId, gameMode, promoFlowActive, startLevel])
 
   const handleNextLevel = useCallback(() => {
     const next = promoFlowActive
       ? getNextCampaignLevel(activeLevelId)
       : getNextLevel(activeLevelId)
-    if (next) void startLevel(next.id, 'classic')
-  }, [activeLevelId, promoFlowActive, startLevel])
+    if (next) {
+      void startLevel(next.id, 'classic', {
+        campaignRunId: promoFlowActive && promoRun?.serverBacked ? promoRun.id : null,
+      })
+    }
+  }, [activeLevelId, promoFlowActive, promoRun, startLevel])
+
+  const retryCampaignVerification = useCallback(async () => {
+    if (!promoRun) return
+    const evaluated = await promotionalCampaignService.evaluateServer(promoRun)
+    setPromoRun(evaluated)
+  }, [promoRun])
 
   const nextLevel = result
     ? promoFlowActive
@@ -457,14 +503,11 @@ export default function App() {
           initialNickname=""
           onContinue={(nickname, mode) => void beginPromotionalCampaign(nickname, mode)}
           onBack={() => setScreen('welcome')}
-          onExploreModes={() => {
-            setPromoFlowActive(false)
-            setScreen('modeSelect')
-          }}
         />
       )}
 
-      {screen === 'modeSelect' && (
+      {/* Secondary hubs retained in codebase for operators / legacy routes only. */}
+      {screen === 'modeSelect' && showOperatorClaims && (
         <ModeSelectScreen
           soundEnabled={soundEnabled}
           onToggleSound={() => void toggleSound()}
@@ -483,7 +526,7 @@ export default function App() {
         <OperatorClaimsScreen
           soundEnabled={soundEnabled}
           onToggleSound={() => void toggleSound()}
-          onBack={() => setScreen('modeSelect')}
+          onBack={() => setScreen('welcome')}
         />
       )}
 
@@ -491,7 +534,7 @@ export default function App() {
         <OnlineProfileScreen
           soundEnabled={soundEnabled}
           onToggleSound={() => void toggleSound()}
-          onBack={() => setScreen('modeSelect')}
+          onBack={() => setScreen('welcome')}
         />
       )}
 
@@ -499,28 +542,17 @@ export default function App() {
         <SolarChampionsScreen
           soundEnabled={soundEnabled}
           onToggleSound={() => void toggleSound()}
-          onBack={() => setScreen('modeSelect')}
+          onBack={() => setScreen(promoRun ? 'voucherDetails' : 'welcome')}
         />
       )}
 
-      {screen === 'rewardCentre' && progress && (
+      {screen === 'rewardCentre' && progress && showOperatorClaims && (
         <RewardCentreScreen
           progress={progress}
           soundEnabled={soundEnabled}
           onToggleSound={() => void toggleSound()}
-          onBack={() => setScreen('modeSelect')}
+          onBack={() => setScreen('welcome')}
           onOnlineProfile={() => setScreen('onlineProfile')}
-        />
-      )}
-
-      {screen === 'levelSelect' && progress && (
-        <LevelSelectScreen
-          progress={progress}
-          mode={gameMode}
-          soundEnabled={soundEnabled}
-          onToggleSound={() => void toggleSound()}
-          onPlayLevel={(id) => void startLevel(id, gameMode)}
-          onBack={() => void goToModeSelect()}
         />
       )}
 
@@ -535,7 +567,13 @@ export default function App() {
           onlineAttemptActive={onlineSession !== null}
           onComplete={(r) => void handleComplete(r)}
           onTimeAttackComplete={(r) => void handleTimeAttackComplete(r)}
-          onExit={() => void goToLevelSelect()}
+          onExit={() => {
+            if (promoFlowActive) {
+              requestNewPlayer()
+              return
+            }
+            void goToLevelSelect()
+          }}
         />
       )}
 
@@ -546,14 +584,22 @@ export default function App() {
           onlineSubmission={onlineSubmission}
           nextUnlocked={nextUnlocked}
           isFinalLevel={isFinalLevel}
-          onReplay={handleReplay}
+          eventCampaignMode={promoFlowActive}
           onNextLevel={handleNextLevel}
-          onLevelSelect={() => void goToLevelSelect()}
           onCampaignComplete={() => void openCampaignComplete()}
+          onRetryVerification={() => {
+            if (onlineSession && engine && result) {
+              void submitOnlineIfNeeded(onlineSession, engine, {
+                score: result.score,
+                durationMs: result.durationMs,
+                coveragePercent: result.coveragePercent,
+              })
+            }
+          }}
         />
       )}
 
-      {screen === 'timeAttackResults' && timeAttackResult && (
+      {screen === 'timeAttackResults' && timeAttackResult && showOperatorClaims && (
         <TimeAttackResultsScreen
           result={timeAttackResult}
           onlineSubmission={onlineSubmission}
@@ -570,10 +616,7 @@ export default function App() {
             setPromoFlowActive(false)
             setScreen('welcome')
           }}
-          onExploreModes={() => {
-            setPromoFlowActive(false)
-            setScreen('modeSelect')
-          }}
+          onRetryVerification={() => void retryCampaignVerification()}
         />
       )}
 
@@ -586,10 +629,8 @@ export default function App() {
             setScreen('welcome')
           }}
           onNewPlayer={() => requestNewPlayer()}
-          onViewLeaderboard={() => {
-            setPromoFlowActive(false)
-            setScreen('solarChampions')
-          }}
+          onViewLeaderboard={() => setScreen('solarChampions')}
+          onRetryVerification={() => void retryCampaignVerification()}
         />
       )}
 

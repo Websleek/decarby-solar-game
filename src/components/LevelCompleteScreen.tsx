@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Award, CheckCircle2, Play, ArrowRight, LayoutGrid, Trophy } from 'lucide-react'
-import { getLevelById, getNextLevel } from '../levels'
+import { Award, CheckCircle2, ArrowRight, LoaderCircle } from 'lucide-react'
+import { getLevelById, getNextCampaignLevel, getNextLevel } from '../levels'
 import { formatDuration } from '../engine/scoring'
-import { formatStopwatch } from '../engine/stopwatch'
 import { ACHIEVEMENTS, type AchievementId } from '../services/localProgress'
 import type { LevelResult, OnlineSubmissionState } from '../types/game'
 import type { PlayerProgress } from '../types/services'
@@ -14,10 +13,13 @@ type LevelCompleteScreenProps = {
   onlineSubmission: OnlineSubmissionState
   nextUnlocked: boolean
   isFinalLevel: boolean
-  onReplay: () => void
+  /** Event campaign: no replay, sequential next only. */
+  eventCampaignMode?: boolean
+  onReplay?: () => void
   onNextLevel: () => void
-  onLevelSelect: () => void
+  onLevelSelect?: () => void
   onCampaignComplete: () => void
+  onRetryVerification?: () => void
 }
 
 export function LevelCompleteScreen({
@@ -26,16 +28,21 @@ export function LevelCompleteScreen({
   onlineSubmission,
   nextUnlocked,
   isFinalLevel,
-  onReplay,
+  eventCampaignMode = false,
   onNextLevel,
-  onLevelSelect,
   onCampaignComplete,
+  onRetryVerification,
 }: LevelCompleteScreenProps) {
   const [shownStars, setShownStars] = useState(0)
   const level = getLevelById(result.levelId)
-  const next = getNextLevel(result.levelId)
-  const bestTime = progress.timeAttackBestMs[result.levelId]
+  const next = eventCampaignMode
+    ? getNextCampaignLevel(result.levelId)
+    : getNextLevel(result.levelId)
   const perfectSaved = progress.perfectRoofLevels.includes(result.levelId)
+  const verifying = onlineSubmission.status === 'submitting'
+  const needsRetry =
+    eventCampaignMode &&
+    (onlineSubmission.status === 'unable_to_connect' || onlineSubmission.status === 'rejected')
 
   useEffect(() => {
     setShownStars(0)
@@ -58,23 +65,27 @@ export function LevelCompleteScreen({
     (id): id is AchievementId => id in ACHIEVEMENTS,
   )
 
+  const canAdvance =
+    result.stars >= 1 &&
+    (eventCampaignMode ? true : nextUnlocked) &&
+    !verifying
+
   return (
     <section className="screen complete">
-      <p className="brand-mark">Level {level?.number ?? ''}</p>
+      <p className="brand-mark">Rooftop {level?.number ?? ''}</p>
       <h1>
         {result.isPerfect
           ? `${level?.title ?? 'Roof'} Perfect!`
           : `${level?.title ?? 'Design'} Complete!`}
       </h1>
 
-      {result.isNewScoreBest && (
-        <div className="pb-banner" role="status">
-          <Trophy size={18} aria-hidden />
-          New personal best score!
-        </div>
-      )}
-
       <OnlineSubmissionBanner state={onlineSubmission} />
+
+      {verifying && (
+        <p className="voucher-processing" role="status">
+          <LoaderCircle size={16} aria-hidden className="spin" /> Verifying your result…
+        </p>
+      )}
 
       {onlineSubmission.status === 'verified' &&
         (onlineSubmission.newlyEarnedAchievements?.length ?? 0) > 0 && (
@@ -115,12 +126,6 @@ export function LevelCompleteScreen({
               'Not yet'
             )}
           </dd>
-          {bestTime !== undefined && (
-            <>
-              <dt>Time Attack best</dt>
-              <dd>{formatStopwatch(bestTime)}</dd>
-            </>
-          )}
         </dl>
         {achievementIds.map((id) => (
           <div key={id} className="achievement" role="status">
@@ -131,30 +136,31 @@ export function LevelCompleteScreen({
       </div>
 
       <div className="complete-actions">
-        <button type="button" className="btn btn-secondary" onClick={onReplay}>
-          <Play size={16} aria-hidden />
-          Replay Level
-        </button>
-        {isFinalLevel && result.stars >= 1 ? (
+        {isFinalLevel && canAdvance ? (
           <button type="button" className="btn btn-primary" onClick={onCampaignComplete}>
-            Celebrate
+            See your reward
             <ArrowRight size={18} aria-hidden />
           </button>
-        ) : next && nextUnlocked ? (
+        ) : next && canAdvance ? (
           <button type="button" className="btn btn-primary" onClick={onNextLevel}>
             Next: {next.title}
             <ArrowRight size={18} aria-hidden />
           </button>
         ) : (
-          <button type="button" className="btn btn-primary" onClick={onLevelSelect}>
-            <LayoutGrid size={16} aria-hidden />
-            Level Select
+          <button type="button" className="btn btn-primary" disabled>
+            {verifying ? 'Verifying…' : 'Earn at least 1 star to continue'}
+          </button>
+        )}
+
+        {needsRetry && onRetryVerification && (
+          <button type="button" className="btn btn-secondary" onClick={onRetryVerification}>
+            Retry verification
           </button>
         )}
       </div>
-      {!isFinalLevel && next && !nextUnlocked && (
-        <p style={{ margin: 0, color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.9rem' }}>
-          Earn at least one star to unlock {next.title}
+      {eventCampaignMode && (
+        <p className="muted" style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>
+          Each rooftop can only be played once in this challenge.
         </p>
       )}
     </section>

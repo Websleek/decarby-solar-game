@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
         p_full_name: validated.value.fullName,
         p_phone: validated.value.phone,
         p_terms_version: validated.value.termsVersion,
-        p_adult_self_attested: true,
+        p_adult_self_attested: validated.value.adultSelfAttested,
         p_marketing_opt_in: validated.value.marketingOptIn,
         p_voucher_code: voucherCode,
       },

@@ -88,7 +88,7 @@ export const voucherClaimService = {
         phone: local.value.phone,
         email: local.value.emailRaw,
         termsAccepted: true,
-        adultSelfAttested: true,
+        adultSelfAttested: local.value.adultSelfAttested,
         marketingOptIn: local.value.marketingOptIn,
         termsVersion: local.value.termsVersion,
         // Intentionally omitted: amountCents — server decision is authoritative.

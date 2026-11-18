@@ -177,18 +177,18 @@ export class GameScene extends Phaser.Scene {
     const width = this.scale.width
     const height = this.scale.height
     const theme = this.theme()
+    const preset = theme.sceneryPreset ?? 'garden'
     const roofLeft = this.offsetX
     const roofTop = this.offsetY
     const roofRight = roofLeft + gridW
     const roofBottom = roofTop + gridH
     const yardPad = Math.max(56, Math.min(width, height) * 0.12)
 
-    // Near top-down lot: soft sky vignette + lawn around the house
-    g.fillStyle(0xb8d9f0, 1)
+    g.fillStyle(theme.sky, 1)
     g.fillRect(0, 0, width, height)
-    this.cameras.main.setBackgroundColor(0xb8d9f0)
-    g.fillStyle(theme.skyDeep, 0.12)
-    g.fillRect(0, 0, width, height * 0.22)
+    this.cameras.main.setBackgroundColor(theme.sky)
+    g.fillStyle(theme.skyDeep, 0.14)
+    g.fillRect(0, 0, width, height * 0.2)
 
     g.fillStyle(theme.grass, 1)
     g.fillRoundedRect(
@@ -198,86 +198,82 @@ export class GameScene extends Phaser.Scene {
       Math.min(height - 16, gridH + yardPad * 1.55),
       18,
     )
-    g.fillStyle(0x5ea038, 0.22)
-    g.fillEllipse(width * 0.22, roofBottom + yardPad * 0.55, 90, 36)
-    g.fillEllipse(width * 0.78, roofTop - 10, 70, 28)
 
-    // Driveway (left) + car silhouette — decorative only
-    const driveX = Math.max(10, roofLeft - yardPad + 8)
-    const driveY = roofTop + gridH * 0.18
-    g.fillStyle(0x9aa3ad, 1)
-    g.fillRoundedRect(driveX, driveY, 42, gridH * 0.72, 6)
-    g.fillStyle(0xffffff, 0.35)
-    for (let i = 0; i < 4; i += 1) {
-      g.fillRect(driveX + 18, driveY + 16 + i * 22, 6, 10)
-    }
-    // Simple top-down car
-    const carX = driveX + 7
-    const carY = driveY + gridH * 0.28
-    g.fillStyle(0x2f4f7a, 1)
-    g.fillRoundedRect(carX, carY, 28, 52, 8)
-    g.fillStyle(0x9ec8ef, 0.85)
-    g.fillRoundedRect(carX + 4, carY + 10, 20, 14, 3)
-    g.fillRoundedRect(carX + 4, carY + 30, 20, 10, 3)
-    g.fillStyle(0x1a1a1a, 0.7)
-    g.fillCircle(carX + 5, carY + 8, 3)
-    g.fillCircle(carX + 23, carY + 8, 3)
-    g.fillCircle(carX + 5, carY + 44, 3)
-    g.fillCircle(carX + 23, carY + 44, 3)
-
-    // Patio / deck (right of roof)
-    const patioX = Math.min(width - 58, roofRight + 10)
-    const patioY = roofTop + gridH * 0.35
-    g.fillStyle(0xd2b48c, 1)
-    g.fillRoundedRect(patioX, patioY, 46, 58, 6)
-    g.fillStyle(0xb8956a, 0.55)
-    g.fillRect(patioX + 4, patioY + 10, 38, 2)
-    g.fillRect(patioX + 4, patioY + 28, 38, 2)
-    g.fillRect(patioX + 4, patioY + 46, 38, 2)
-    // Patio table + chairs (tiny)
-    g.fillStyle(0x8b6914, 1)
-    g.fillCircle(patioX + 23, patioY + 28, 8)
-    g.fillStyle(0xc4a35a, 1)
-    g.fillCircle(patioX + 23, patioY + 28, 5)
-
-    // Fence posts along lower yard edge
-    const fenceY = Math.min(height - 18, roofBottom + yardPad * 0.85)
-    g.fillStyle(0x8d6e4c, 1)
-    const fenceLeft = Math.max(16, roofLeft - yardPad + 6)
-    const fenceRight = Math.min(width - 16, roofRight + yardPad - 6)
-    g.fillRect(fenceLeft, fenceY, fenceRight - fenceLeft, 3)
-    for (let x = fenceLeft; x <= fenceRight; x += 18) {
-      g.fillRect(x, fenceY - 10, 3, 14)
-    }
-
-    // Shrubs / garden beds flanking the roof (never overlapping playable cells)
     const shrub = (x: number, y: number, w: number, h: number) => {
       g.fillStyle(0x3f7d2c, 1)
       g.fillEllipse(x, y, w, h)
       g.fillStyle(0x5ea038, 1)
       g.fillEllipse(x - w * 0.15, y - 2, w * 0.55, h * 0.7)
     }
-    shrub(roofLeft - 28, roofTop + 18, 30, 18)
-    shrub(roofLeft - 22, roofBottom - 12, 26, 16)
-    shrub(roofRight + 24, roofTop + 24, 28, 16)
-    shrub(roofRight + 20, roofBottom - 8, 24, 14)
-    // Flower accents
-    g.fillStyle(0xed3363, 0.85)
-    g.fillCircle(roofLeft - 18, roofBottom + 8, 3)
-    g.fillCircle(roofLeft - 28, roofBottom + 12, 2.5)
-    g.fillStyle(0xf5c518, 0.9)
-    g.fillCircle(roofRight + 16, roofBottom + 10, 3)
 
-    // Soft roof shadow + tile plate (playable area stays visually clear)
+    if (preset === 'garden') {
+      // Walking path
+      g.fillStyle(0xcbb89a, 1)
+      g.fillRoundedRect(width / 2 - 14, roofBottom + 8, 28, yardPad * 0.7, 8)
+      g.fillStyle(0xb89f7d, 0.45)
+      for (let i = 0; i < 5; i += 1) {
+        g.fillRect(width / 2 - 10, roofBottom + 14 + i * 10, 20, 3)
+      }
+      shrub(roofLeft - 26, roofTop + 20, 28, 16)
+      shrub(roofRight + 24, roofTop + 28, 26, 15)
+      shrub(roofLeft - 20, roofBottom - 8, 24, 14)
+      g.fillStyle(0xed3363, 0.9)
+      g.fillCircle(roofLeft - 16, roofBottom + 10, 3)
+      g.fillStyle(0xf5c518, 0.9)
+      g.fillCircle(roofRight + 14, roofBottom + 12, 3)
+    } else if (preset === 'driveway') {
+      const driveX = Math.max(10, roofLeft - yardPad + 8)
+      const driveY = roofTop + gridH * 0.12
+      g.fillStyle(0x8f97a1, 1)
+      g.fillRoundedRect(driveX, driveY, 44, gridH * 0.78, 6)
+      g.fillStyle(0xffffff, 0.3)
+      for (let i = 0; i < 5; i += 1) {
+        g.fillRect(driveX + 19, driveY + 12 + i * 20, 6, 9)
+      }
+      const carX = driveX + 8
+      const carY = driveY + gridH * 0.3
+      g.fillStyle(0x2f4f7a, 1)
+      g.fillRoundedRect(carX, carY, 28, 52, 8)
+      g.fillStyle(0x9ec8ef, 0.85)
+      g.fillRoundedRect(carX + 4, carY + 10, 20, 14, 3)
+      g.fillRoundedRect(carX + 4, carY + 30, 20, 10, 3)
+      g.fillStyle(0x1a1a1a, 0.75)
+      g.fillCircle(carX + 5, carY + 8, 3)
+      g.fillCircle(carX + 23, carY + 8, 3)
+      g.fillCircle(carX + 5, carY + 44, 3)
+      g.fillCircle(carX + 23, carY + 44, 3)
+      shrub(roofRight + 22, roofTop + 22, 26, 15)
+      shrub(roofRight + 18, roofBottom - 10, 22, 13)
+    } else {
+      // patio + fence
+      const patioX = Math.min(width - 58, roofRight + 10)
+      const patioY = roofTop + gridH * 0.28
+      g.fillStyle(0xd2b48c, 1)
+      g.fillRoundedRect(patioX, patioY, 46, 64, 6)
+      g.fillStyle(0xb8956a, 0.55)
+      g.fillRect(patioX + 4, patioY + 12, 38, 2)
+      g.fillRect(patioX + 4, patioY + 32, 38, 2)
+      g.fillRect(patioX + 4, patioY + 52, 38, 2)
+      g.fillStyle(0x8b6914, 1)
+      g.fillCircle(patioX + 23, patioY + 30, 8)
+      g.fillStyle(0xc4a35a, 1)
+      g.fillCircle(patioX + 23, patioY + 30, 5)
+      const fenceY = Math.min(height - 18, roofBottom + yardPad * 0.85)
+      g.fillStyle(0x8d6e4c, 1)
+      const fenceLeft = Math.max(16, roofLeft - yardPad + 6)
+      const fenceRight = Math.min(width - 16, roofRight + yardPad - 6)
+      g.fillRect(fenceLeft, fenceY, fenceRight - fenceLeft, 3)
+      for (let x = fenceLeft; x <= fenceRight; x += 18) {
+        g.fillRect(x, fenceY - 10, 3, 14)
+      }
+      shrub(roofLeft - 24, roofTop + 18, 26, 15)
+      shrub(roofLeft - 18, roofBottom - 6, 22, 13)
+    }
+
+    // Roof plate with gutter / fascia — playable area stays clear
     const pad = 14
-    g.fillStyle(0x000000, 0.16)
-    g.fillRoundedRect(
-      roofLeft - pad + 5,
-      roofTop - pad + 8,
-      gridW + pad * 2,
-      gridH + pad * 2,
-      10,
-    )
+    g.fillStyle(0x000000, 0.18)
+    g.fillRoundedRect(roofLeft - pad + 5, roofTop - pad + 8, gridW + pad * 2, gridH + pad * 2, 10)
     g.fillStyle(theme.roofEdge, 1)
     g.fillRoundedRect(roofLeft - pad, roofTop - pad, gridW + pad * 2, gridH + pad * 2, 10)
     g.fillStyle(theme.roofDeck, 1)
@@ -288,9 +284,7 @@ export class GameScene extends Phaser.Scene {
       gridH + pad * 2 - 6,
       8,
     )
-
-    // Gutter / fascia ring so the roof reads as a real top-down plane
-    g.lineStyle(3, theme.roofEdge, 0.9)
+    g.lineStyle(3, theme.roofEdge, 0.95)
     g.strokeRoundedRect(
       roofLeft - pad + 1,
       roofTop - pad + 1,
@@ -298,6 +292,39 @@ export class GameScene extends Phaser.Scene {
       gridH + pad * 2 - 2,
       8,
     )
+    // Ridge cap suggestion across top of plate
+    g.fillStyle(0xffffff, 0.18)
+    g.fillRoundedRect(roofLeft - pad + 8, roofTop - pad + 4, gridW + pad * 2 - 16, 5, 2)
+  }
+
+  /** Overlapping tile courses — cheap graphics, no per-frame textures. */
+  private drawRoofTileCell(x: number, y: number, col: number, row: number): void {
+    const g = this.roofGfx
+    const s = this.cellSize
+    const theme = this.theme()
+    const base = (col + row) % 2 === 0 ? theme.roofDeck : theme.roofDeckAlt
+    const shade = theme.roofEdge
+    g.fillStyle(base, 1)
+    g.fillRect(x + 1, y + 1, s - 2, s - 2)
+
+    // Staggered overlapping courses
+    const courseH = Math.max(4, Math.floor(s / 3.2))
+    const stagger = row % 2 === 0 ? 0 : s * 0.22
+    for (let i = 0; i < 3; i += 1) {
+      const yy = y + 3 + i * courseH
+      g.fillStyle(shade, 0.22)
+      g.fillRect(x + 2 + stagger * 0.15, yy + courseH - 2, s - 4, 2)
+      g.lineStyle(1, 0xffffff, 0.12)
+      g.lineBetween(x + 3 + stagger, yy + 1, x + s - 3, yy + 1)
+      // Vertical seams suggesting individual tiles
+      const seam = s / 3
+      g.lineStyle(1, shade, 0.28)
+      g.lineBetween(x + seam + stagger * 0.2, yy, x + seam + stagger * 0.2, yy + courseH - 1)
+      g.lineBetween(x + seam * 2 - stagger * 0.1, yy, x + seam * 2 - stagger * 0.1, yy + courseH - 1)
+    }
+    // Soft shadow at bottom edge of cell
+    g.fillStyle(0x000000, 0.1)
+    g.fillRect(x + 1, y + s - 4, s - 2, 3)
   }
 
   private obstacleKindAt(col: number, row: number): string | null {
@@ -360,34 +387,56 @@ export class GameScene extends Phaser.Scene {
           this.roofGfx.fillRect(x + 1, y + 1, this.cellSize - 2, this.cellSize - 2)
           this.drawObstacle(x, y, this.obstacleKindAt(col, row))
         } else if (cell.state === 'occupied') {
-          this.roofGfx.fillStyle(theme.roofDeckAlt, 1)
+          this.drawRoofTileCell(x, y, col, row)
+          this.roofGfx.fillStyle(theme.roofEdge, 0.12)
           this.roofGfx.fillRect(x + 1, y + 1, this.cellSize - 2, this.cellSize - 2)
         } else {
-          // Roof tile / shingle reading (checker + horizontal courses)
-          const tone = (col + row) % 2 === 0 ? theme.roofDeck : theme.roofDeckAlt
-          this.roofGfx.fillStyle(tone, 1)
-          this.roofGfx.fillRect(x + 1, y + 1, this.cellSize - 2, this.cellSize - 2)
-          this.roofGfx.lineStyle(1, theme.roofEdge, 0.22)
-          this.roofGfx.lineBetween(
-            x + 3,
-            y + this.cellSize * 0.33,
-            x + this.cellSize - 3,
-            y + this.cellSize * 0.33,
-          )
-          this.roofGfx.lineBetween(
-            x + 3,
-            y + this.cellSize * 0.66,
-            x + this.cellSize - 3,
-            y + this.cellSize * 0.66,
-          )
-          this.roofGfx.lineStyle(1, 0xffffff, 0.08)
-          this.roofGfx.lineBetween(x + this.cellSize / 2, y + 3, x + this.cellSize / 2, y + this.cellSize - 3)
+          this.drawRoofTileCell(x, y, col, row)
         }
 
         const lineAlpha = activeGuidance ? 0.55 : 0.18
         const lineColor = activeGuidance ? COLORS.gridActive : COLORS.gridIdle
         this.roofGfx.lineStyle(1, lineColor, lineAlpha)
         this.roofGfx.strokeRect(x + 0.5, y + 0.5, this.cellSize - 1, this.cellSize - 1)
+      }
+    }
+
+    this.drawRoofRidges(grid, level)
+  }
+
+  /** Ridge caps along pitched section joins (incl. L-roof junctions). */
+  private drawRoofRidges(
+    grid: ReturnType<PuzzleEngine['getGrid']>,
+    level: PuzzleEngine['level'],
+  ): void {
+    const g = this.roofGfx
+    const theme = this.theme()
+    const s = this.cellSize
+    const playable = (col: number, row: number) => {
+      if (row < 0 || col < 0 || row >= level.rows || col >= level.columns) return false
+      const cell = grid[row]![col]
+      return cell != null && cell.state !== 'outside'
+    }
+
+    for (let row = 0; row < level.rows; row += 1) {
+      for (let col = 0; col < level.columns; col += 1) {
+        if (!playable(col, row)) continue
+        const x = this.offsetX + col * s
+        const y = this.offsetY + row * s
+        // Horizontal ridge when neighbour above is outside / missing
+        if (!playable(col, row - 1)) {
+          g.fillStyle(0xffffff, 0.35)
+          g.fillRect(x + 2, y + 1, s - 4, 3)
+          g.fillStyle(theme.roofEdge, 0.55)
+          g.fillRect(x + 2, y + 3, s - 4, 2)
+        }
+        // Vertical ridge / valley when neighbour left is outside (L junctions)
+        if (!playable(col - 1, row)) {
+          g.fillStyle(0xffffff, 0.28)
+          g.fillRect(x + 1, y + 2, 3, s - 4)
+          g.fillStyle(theme.roofEdge, 0.5)
+          g.fillRect(x + 3, y + 2, 2, s - 4)
+        }
       }
     }
   }

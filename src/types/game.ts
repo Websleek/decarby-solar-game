@@ -37,6 +37,10 @@ export type ObstacleDefinition = Readonly<{
   cells: readonly GridCoord[]
 }>
 
+export type RoofTileStyle = 'terracotta' | 'charcoal' | 'warmGrey'
+
+export type SceneryPreset = 'garden' | 'driveway' | 'patio'
+
 export type LevelVisualTheme = Readonly<{
   sky: number
   skyDeep: number
@@ -44,6 +48,10 @@ export type LevelVisualTheme = Readonly<{
   roofDeckAlt: number
   roofEdge: number
   grass: number
+  /** Optional illustrated tile style for event rooftops. */
+  tileStyle?: RoofTileStyle
+  /** Decorative lot scenery around the playable roof. */
+  sceneryPreset?: SceneryPreset
 }>
 
 export type LevelDefinition = Readonly<{

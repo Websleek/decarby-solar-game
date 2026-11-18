@@ -9,7 +9,6 @@ type PromotionalNicknameScreenProps = {
   initialNickname?: string
   onContinue: (nickname: string, mode: 'online' | 'offline') => void
   onBack: () => void
-  onExploreModes: () => void
 }
 
 export function PromotionalNicknameScreen({
@@ -18,7 +17,6 @@ export function PromotionalNicknameScreen({
   initialNickname = '',
   onContinue,
   onBack,
-  onExploreModes,
 }: PromotionalNicknameScreenProps) {
   const [nickname, setNickname] = useState(initialNickname)
   const [message, setMessage] = useState<string | null>(null)
@@ -96,9 +94,6 @@ export function PromotionalNicknameScreen({
             Play local demo
           </button>
         )}
-        <button type="button" className="btn btn-ghost" onClick={onExploreModes} disabled={busy}>
-          More ways to play
-        </button>
         <button type="button" className="btn btn-secondary" onClick={onBack} disabled={busy}>
           <ArrowLeft size={16} aria-hidden />
           Back

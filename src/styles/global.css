@@ -2658,6 +2658,27 @@ button:disabled {
   color: var(--text-muted, #625d71);
 }
 
+.voucher-blockers {
+  margin: 0;
+  padding: 0.75rem 1rem 0.75rem 1.4rem;
+  background: #fff6f0;
+  border: 1px solid #f0c7b0;
+  border-radius: var(--radius-md);
+  color: #5c2b1a;
+  font-weight: 700;
+  text-align: left;
+}
+
+.voucher-blockers li + li {
+  margin-top: 0.35rem;
+}
+
+.terms-link {
+  color: var(--brand-purple, #6e3ce2);
+  font-weight: 800;
+  text-decoration: underline;
+}
+
 .voucher-claim-form input[type='text'],
 .voucher-claim-form input[type='email'],
 .voucher-claim-form input[type='tel'],

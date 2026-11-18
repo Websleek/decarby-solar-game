@@ -1,30 +1,39 @@
 import type { LevelVisualTheme } from '../types/game'
 
+/** Level 1 — terracotta tiles, garden setting. */
 export const THEME_SUNNY: LevelVisualTheme = {
-  sky: 0x7ec8e8,
-  skyDeep: 0x5eb3e4,
-  roofDeck: 0xd4b08a,
-  roofDeckAlt: 0xc9a27a,
-  roofEdge: 0xa67c52,
-  grass: 0x6eab3e,
+  sky: 0xb7d9f2,
+  skyDeep: 0x8ec4e8,
+  roofDeck: 0xc45c3a,
+  roofDeckAlt: 0xb04e30,
+  roofEdge: 0x8a3a24,
+  grass: 0x5fa83a,
+  tileStyle: 'terracotta',
+  sceneryPreset: 'garden',
 }
 
+/** Level 2 — charcoal tiles, driveway setting. */
 export const THEME_CHIMNEY: LevelVisualTheme = {
-  sky: 0x74b9e8,
-  skyDeep: 0x3d8fc4,
-  roofDeck: 0xcba07c,
-  roofDeckAlt: 0xbf926e,
-  roofEdge: 0x8f6844,
-  grass: 0x5f9e38,
+  sky: 0xa9cfe8,
+  skyDeep: 0x6ea8cc,
+  roofDeck: 0x4a4f57,
+  roofDeckAlt: 0x3b4048,
+  roofEdge: 0x2a2e35,
+  grass: 0x4f8f2e,
+  tileStyle: 'charcoal',
+  sceneryPreset: 'driveway',
 }
 
+/** Level 3 — warm-grey tiles, patio / L-roof setting. */
 export const THEME_TRICKY: LevelVisualTheme = {
-  sky: 0x6eb6e0,
-  skyDeep: 0x357eac,
-  roofDeck: 0xc4966e,
-  roofDeckAlt: 0xb8875f,
-  roofEdge: 0x7d5a3c,
+  sky: 0x9fc6de,
+  skyDeep: 0x5f92b4,
+  roofDeck: 0x8a8378,
+  roofDeckAlt: 0x766f65,
+  roofEdge: 0x5a544c,
   grass: 0x569434,
+  tileStyle: 'warmGrey',
+  sceneryPreset: 'patio',
 }
 
 export const THEME_MASTER: LevelVisualTheme = {
@@ -34,6 +43,8 @@ export const THEME_MASTER: LevelVisualTheme = {
   roofDeckAlt: 0xaa7b58,
   roofEdge: 0x6e4d34,
   grass: 0x4c8530,
+  tileStyle: 'terracotta',
+  sceneryPreset: 'garden',
 }
 
 export const THEME_CHAMPION: LevelVisualTheme = {
@@ -43,4 +54,6 @@ export const THEME_CHAMPION: LevelVisualTheme = {
   roofDeckAlt: 0x9e6f4a,
   roofEdge: 0x5f412c,
   grass: 0x3f7228,
+  tileStyle: 'charcoal',
+  sceneryPreset: 'driveway',
 }

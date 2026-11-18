@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react'
 import { ArrowLeft, Home, Mail, ShieldCheck, UserPlus, Trophy } from 'lucide-react'
 import type { CampaignCompleteView } from '../../shared/campaign/types'
 import { MAX_CAMPAIGN_STARS } from '../../shared/campaign/rewardTiers'
@@ -6,6 +6,7 @@ import {
   classifyEmailDelivery,
   emailDeliveryUserMessage,
 } from '../../shared/rewards/emailDeliveryStatus'
+import { evaluateVoucherSubmitReadiness } from '../../shared/rewards/voucherSubmitReadiness'
 import type { ClaimCampaignVoucherResult } from '../../shared/rewards/voucherClaim'
 import {
   emptyVoucherClaimForm,
@@ -23,6 +24,7 @@ type VoucherDetailsScreenProps = {
   onHome: () => void
   onNewPlayer: () => void
   onViewLeaderboard: () => void
+  onRetryVerification?: () => void
 }
 
 function formatAud(cents: number): string {
@@ -35,6 +37,7 @@ export function VoucherDetailsScreen({
   onHome,
   onNewPlayer,
   onViewLeaderboard,
+  onRetryVerification,
 }: VoucherDetailsScreenProps) {
   const formId = useId()
   const submittingRef = useRef(false)
@@ -44,19 +47,37 @@ export function VoucherDetailsScreen({
   const [result, setResult] = useState<ClaimCampaignVoucherResult | null>(null)
 
   const rewardLabel = view.rewardLabel ?? formatAud(view.rewardAmountCents)
-  const canSubmit =
-    view.serverVerified &&
-    view.rewardAmountCents > 0 &&
-    view.run.serverBacked &&
-    !view.run.provisional
 
   useEffect(() => {
     const cached = readCachedClaimResult(view.run.id)
     if (cached) setResult(cached)
   }, [view.run.id])
 
+  const readiness = useMemo(
+    () =>
+      evaluateVoucherSubmitReadiness(
+        {
+          serverVerified: view.serverVerified,
+          rewardAmountCents: view.rewardAmountCents,
+          serverBacked: view.run.serverBacked,
+          provisional: view.run.provisional,
+          alreadyClaimed: result?.ok === true,
+          busy,
+        },
+        {
+          fullName: form.fullName,
+          phone: form.phone,
+          email: form.email,
+          termsAccepted: form.termsAccepted,
+          marketingOptIn: form.marketingOptIn,
+        },
+      ),
+    [view, form, busy, result],
+  )
+
   const update = <K extends keyof VoucherClaimFormState>(key: K, value: VoucherClaimFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
+    setError(null)
   }
 
   const submit = async (event: FormEvent) => {
@@ -64,10 +85,26 @@ export function VoucherDetailsScreen({
     if (busy || submittingRef.current || result?.ok) return
     setError(null)
 
-    if (!canSubmit) {
-      setError(
-        'This campaign result is not fully server-verified yet. Complete an online verified run before claiming.',
-      )
+    const latest = evaluateVoucherSubmitReadiness(
+      {
+        serverVerified: view.serverVerified,
+        rewardAmountCents: view.rewardAmountCents,
+        serverBacked: view.run.serverBacked,
+        provisional: view.run.provisional,
+        alreadyClaimed: false,
+        busy: false,
+      },
+      {
+        fullName: form.fullName,
+        phone: form.phone,
+        email: form.email,
+        termsAccepted: form.termsAccepted,
+        marketingOptIn: form.marketingOptIn,
+      },
+    )
+
+    if (!latest.canSubmit) {
+      setError(latest.blockers[0] ?? 'Complete the required fields to send your voucher.')
       return
     }
 
@@ -76,7 +113,11 @@ export function VoucherDetailsScreen({
     try {
       const response = await voucherClaimService.claim({
         runId: view.run.id,
-        form,
+        form: {
+          ...form,
+          // Adult checkbox removed — never fabricate attestation.
+          adultSelfAttested: false,
+        },
       })
       setResult(response)
       if (response.ok) {
@@ -166,11 +207,8 @@ export function VoucherDetailsScreen({
       <p className="brand-mark">
         <span>Decarby</span> Solar
       </p>
-      <h1>Voucher details</h1>
-      <p className="tagline">
-        Enter adult contact details to request your campaign voucher. Children can keep playing
-        without submitting commercial contact information.
-      </p>
+      <h1>Claim your voucher</h1>
+      <p className="tagline">Enter your name and email. Phone is optional.</p>
 
       <div className="result-card voucher-summary-card">
         <div className="voucher-summary-grid" aria-label="Campaign reward summary">
@@ -193,6 +231,17 @@ export function VoucherDetailsScreen({
           Discount amount comes from your server-verified campaign result — not this form.
         </p>
       </div>
+
+      {!readiness.campaignReady && (
+        <div className="status-banner" role="status">
+          <p>{readiness.blockers[0]}</p>
+          {onRetryVerification && (view.run.provisional || !view.serverVerified) && (
+            <button type="button" className="btn btn-secondary" onClick={onRetryVerification}>
+              Retry verification
+            </button>
+          )}
+        </div>
+      )}
 
       <form className="voucher-claim-form" id={formId} onSubmit={(e) => void submit(e)} noValidate>
         <label className="field" htmlFor={`${formId}-name`}>
@@ -251,21 +300,16 @@ export function VoucherDetailsScreen({
             onChange={(event) => update('termsAccepted', event.target.checked)}
           />
           <span>
-            I agree to the Decarby promotional terms ({voucherClaimService.termsVersion}). An
-            approved public terms page is not linked yet.
-          </span>
-        </label>
-
-        <label className="voucher-check" htmlFor={`${formId}-adult`}>
-          <input
-            id={`${formId}-adult`}
-            type="checkbox"
-            checked={form.adultSelfAttested}
-            disabled={busy}
-            onChange={(event) => update('adultSelfAttested', event.target.checked)}
-          />
-          <span>
-            I confirm I am an adult eligible for this promotional offer (self-attestation only).
+            I agree to the Decarby promotional terms ({voucherClaimService.termsVersion}).{' '}
+            <a
+              className="terms-link"
+              href="https://decarbysolar.com.au/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Read Decarby Solar information
+            </a>
+            . An approved public terms page is not linked yet.
           </span>
         </label>
 
@@ -292,17 +336,21 @@ export function VoucherDetailsScreen({
           </p>
         )}
 
+        {!error && !readiness.canSubmit && readiness.blockers.length > 0 && (
+          <ul className="voucher-blockers" aria-live="polite">
+            {readiness.blockers.map((blocker) => (
+              <li key={blocker}>{blocker}</li>
+            ))}
+          </ul>
+        )}
+
         <div className="voucher-submit-stack">
-          <button type="submit" className="btn btn-primary" disabled={busy || !canSubmit}>
+          <button type="submit" className="btn btn-primary" disabled={busy || !readiness.canSubmit}>
             Send My Voucher
           </button>
           <button type="button" className="btn btn-secondary" onClick={onBack} disabled={busy}>
             <ArrowLeft size={16} aria-hidden />
             Back to results
-          </button>
-          <button type="button" className="btn btn-tertiary" onClick={onHome} disabled={busy}>
-            <Home size={16} aria-hidden />
-            Home
           </button>
         </div>
       </form>

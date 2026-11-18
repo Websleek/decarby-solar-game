@@ -95,13 +95,25 @@ describe('phase 4C.3 security and operational contracts', () => {
 })
 
 describe('phase 4C.3 consent and snapshot pure rules', () => {
-  it('requires adult attestation, terms acceptance and matching version', () => {
+  it('requires terms; adult attestation only when explicitly required (live path)', () => {
+    // Event/demo default: no separate adult checkbox — terms still required.
     expect(
       validatePromotionalConsentInput({
         adultSelfAttested: false,
         termsAccepted: true,
         termsVersion: 'promo-terms-v1',
       }).ok,
+    ).toBe(true)
+    expect(
+      validatePromotionalConsentInput(
+        {
+          adultSelfAttested: false,
+          termsAccepted: true,
+          termsVersion: 'promo-terms-v1',
+        },
+        'promo-terms-v1',
+        { requireAdultAttestation: true },
+      ).ok,
     ).toBe(false)
     expect(
       validatePromotionalConsentInput({

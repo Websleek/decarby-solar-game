@@ -29,7 +29,8 @@ export type ValidatedVoucherContact = Readonly<{
   emailRaw: string
   emailNormalized: string
   termsAccepted: true
-  adultSelfAttested: true
+  /** Honest attestation flag — false when the event UI does not collect it. */
+  adultSelfAttested: boolean
   marketingOptIn: boolean
   termsVersion: string
 }>
@@ -191,15 +192,18 @@ export function validateVoucherContactForm(
     return { ok: false, code: 'invalid_email', reason: email.reason, field: 'email' }
   }
 
+  const adultSelfAttested = input.adultSelfAttested === true
   const consent = validatePromotionalConsentInput(
     {
-      adultSelfAttested: input.adultSelfAttested === true,
+      adultSelfAttested,
       termsAccepted: input.termsAccepted === true,
       termsVersion:
         typeof input.termsVersion === 'string' ? input.termsVersion : expectedTermsVersion,
       marketingOptIn: input.marketingOptIn === true,
     },
     expectedTermsVersion,
+    // Event form no longer collects a separate adult checkbox.
+    { requireAdultAttestation: false },
   )
   if (!consent.ok) {
     return {
@@ -218,7 +222,8 @@ export function validateVoucherContactForm(
       emailRaw: email.raw,
       emailNormalized: email.normalized,
       termsAccepted: true,
-      adultSelfAttested: true,
+      // Honest value only — never fabricate adult attestation.
+      adultSelfAttested,
       marketingOptIn: input.marketingOptIn === true,
       termsVersion: expectedTermsVersion,
     },

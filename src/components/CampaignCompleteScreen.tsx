@@ -6,14 +6,14 @@ type CampaignCompleteScreenProps = {
   view: CampaignCompleteView
   onContinuePlaceholder: () => void
   onHome: () => void
-  onExploreModes: () => void
+  onRetryVerification?: () => void
 }
 
 export function CampaignCompleteScreen({
   view,
   onContinuePlaceholder,
   onHome,
-  onExploreModes,
+  onRetryVerification,
 }: CampaignCompleteScreenProps) {
   return (
     <section className="screen complete campaign-complete promo-campaign-complete">
@@ -100,12 +100,14 @@ export function CampaignCompleteScreen({
           <ArrowRight size={16} aria-hidden />
           {view.nextStepLabel}
         </button>
+        {!view.serverVerified && onRetryVerification && (
+          <button type="button" className="btn btn-secondary" onClick={onRetryVerification}>
+            Retry verification
+          </button>
+        )}
         <button type="button" className="btn btn-tertiary" onClick={onHome}>
           <Home size={16} aria-hidden />
           Home
-        </button>
-        <button type="button" className="btn btn-ghost" onClick={onExploreModes}>
-          More ways to play
         </button>
       </div>
     </section>
