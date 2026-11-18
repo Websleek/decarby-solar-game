@@ -18,43 +18,44 @@ function fullRun(stars: readonly number[]): VerifiedCampaignLevelResult[] {
 }
 
 describe('pickTierForStars boundaries (3-rooftop event)', () => {
-  it('maps 9 → A$500, 8 → A$250, 6–7 → A$100, 3–5 → A$50', () => {
+  it('maps 0–5 → A$50, 6–7 → A$100, 8 → A$250, 9 → A$500', () => {
     expect(MAX_CAMPAIGN_STARS).toBe(9)
-    expect(pickTierForStars(9)?.amountCents).toBe(50_000)
-    expect(pickTierForStars(8)?.amountCents).toBe(25_000)
-    expect(pickTierForStars(7)?.amountCents).toBe(10_000)
-    expect(pickTierForStars(6)?.amountCents).toBe(10_000)
+    expect(pickTierForStars(0)?.amountCents).toBe(5_000)
     expect(pickTierForStars(5)?.amountCents).toBe(5_000)
-    expect(pickTierForStars(3)?.amountCents).toBe(5_000)
-    expect(pickTierForStars(2)).toBeNull()
+    expect(pickTierForStars(6)?.amountCents).toBe(10_000)
+    expect(pickTierForStars(7)?.amountCents).toBe(10_000)
+    expect(pickTierForStars(8)?.amountCents).toBe(25_000)
+    expect(pickTierForStars(9)?.amountCents).toBe(50_000)
   })
 })
 
 describe('evaluateCampaignReward', () => {
-  it('awards correct amounts across 3-level star totals', () => {
+  it('gives every completed run at least A$50', () => {
     const cases: Array<[number[], number]> = [
-      [[1, 1, 1], 5_000], // 3
-      [[2, 2, 1], 5_000], // 5
-      [[2, 2, 2], 10_000], // 6
-      [[3, 2, 2], 10_000], // 7
-      [[3, 3, 2], 25_000], // 8
-      [[3, 3, 3], 50_000], // 9
+      [[0, 0, 0], 5_000],
+      [[1, 1, 1], 5_000],
+      [[2, 2, 1], 5_000],
+      [[2, 2, 2], 10_000],
+      [[3, 2, 2], 10_000],
+      [[3, 3, 2], 25_000],
+      [[3, 3, 3], 50_000],
     ]
     for (const [stars, cents] of cases) {
       const decision = evaluateCampaignReward(fullRun(stars))
       expect(decision.eligible).toBe(true)
-      if (decision.eligible) expect(decision.amountCents).toBe(cents)
+      if (decision.eligible) {
+        expect(decision.amountCents).toBe(cents)
+        expect(decision.totalStars).toBe(stars.reduce((a, b) => a + b, 0))
+      }
     }
   })
 
-  it('rejects incomplete campaigns and zero-star levels', () => {
-    expect(evaluateCampaignReward(fullRun([3, 3])).eligible).toBe(false)
-    const zero = evaluateCampaignReward(fullRun([3, 3, 0]))
-    expect(zero.eligible).toBe(false)
-    if (!zero.eligible) expect(zero.code).toBe('zero_star_level')
+  it('rejects incomplete campaigns', () => {
+    const incomplete = fullRun([3, 3, 3]).slice(0, 2)
+    expect(evaluateCampaignReward(incomplete).eligible).toBe(false)
   })
 
-  it('rejects duplicate levels and does not trust empty record ids', () => {
+  it('rejects duplicate levels and empty record ids', () => {
     const dup = fullRun([3, 3, 3])
     dup.push({ ...dup[0]! })
     expect(evaluateCampaignReward(dup).eligible).toBe(false)

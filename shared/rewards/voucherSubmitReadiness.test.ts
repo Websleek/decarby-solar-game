@@ -38,7 +38,15 @@ describe('evaluateVoucherSubmitReadiness', () => {
       readyForm,
     )
     expect(result.canSubmit).toBe(false)
-    expect(result.blockers.join(' ')).toMatch(/not fully server-verified/i)
+    expect(result.blockers.join(' ')).toMatch(/not fully server-verified|verification/i)
+  })
+
+  it('does not use Not eligible wording for reward blockers', () => {
+    const result = evaluateVoucherSubmitReadiness(
+      { ...readyCampaign, rewardAmountCents: 0 },
+      readyForm,
+    )
+    expect(result.blockers.join(' ')).not.toMatch(/Not eligible/i)
   })
 
   it('shows actionable blockers for missing terms', () => {

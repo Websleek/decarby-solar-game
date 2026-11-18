@@ -2,6 +2,8 @@
  * Event campaign reward tiers (AUD cents) for the 3-rooftop primary flow.
  * Pure, authoritative calculator shared by client and server.
  * Thresholds are intentionally easy to retune via REWARD_TIERS.
+ *
+ * Event rule: every completed 3-rooftop run receives at least A$50 OFF.
  */
 
 import { CAMPAIGN_LEVEL_IDS, type CampaignLevelId } from '../achievements/registry.ts'
@@ -13,8 +15,8 @@ export const REWARD_CURRENCY = 'AUD' as const
 export const MAX_STARS_PER_LEVEL = 3 as const
 /** Max stars for a full 3-level campaign run. */
 export const MAX_CAMPAIGN_STARS = CAMPAIGN_LEVEL_IDS.length * MAX_STARS_PER_LEVEL
-/** Minimum total stars for the lowest promotional tier. */
-export const MIN_REWARD_STARS = 3 as const
+/** Minimum total stars for the lowest promotional tier (completed run floor). */
+export const MIN_REWARD_STARS = 0 as const
 
 export const REWARD_TIER_IDS = ['tier_500', 'tier_250', 'tier_100', 'tier_50'] as const
 export type RewardTierId = (typeof REWARD_TIER_IDS)[number]
@@ -31,7 +33,7 @@ export type RewardTierDefinition = Readonly<{
  * Inclusive star ranges for total stars across 3 rooftops (max 9).
  * Higher tiers win when ranges are checked top-down.
  *
- * Adjust bands here only — evaluateCampaignReward stays shared.
+ * 0–5 → A$50 · 6–7 → A$100 · 8 → A$250 · 9 → A$500
  */
 export const REWARD_TIERS: readonly RewardTierDefinition[] = Object.freeze([
   {
@@ -95,7 +97,6 @@ export type CampaignRewardDecision =
       code:
         | 'incomplete_campaign'
         | 'missing_level'
-        | 'zero_star_level'
         | 'invalid_stars'
         | 'duplicate_level'
         | 'wrong_level_set'
@@ -121,6 +122,8 @@ export function pickTierForStars(totalStars: number): RewardTierDefinition | nul
 /**
  * Evaluate promotional eligibility from a single qualifying run's verified results.
  * Does not accept localStorage stars or unrelated personal-best history.
+ *
+ * A complete 3-rooftop run always maps to a tier (minimum A$50 OFF).
  */
 export function evaluateCampaignReward(
   results: readonly VerifiedCampaignLevelResult[],
@@ -166,24 +169,17 @@ export function evaluateCampaignReward(
     if (!row) {
       return ineligible('missing_level', sumStars(byLevel), totalScore, `Missing ${levelId}.`)
     }
-    if (row.verifiedStars < 1) {
-      return ineligible(
-        'zero_star_level',
-        sumStars(byLevel),
-        totalScore,
-        `Each rooftop must earn at least 1 star (${levelId}).`,
-      )
-    }
   }
 
   const totalStars = sumStars(byLevel)
   const tier = pickTierForStars(totalStars)
   if (!tier) {
+    // Should be unreachable with the 0–9 coverage of REWARD_TIERS.
     return ineligible(
       'below_minimum_stars',
       totalStars,
       totalScore,
-      `Total stars ${totalStars} is below the A$50 OFF minimum (${MIN_REWARD_STARS}).`,
+      `Total stars ${totalStars} could not be mapped to a reward tier.`,
     )
   }
 

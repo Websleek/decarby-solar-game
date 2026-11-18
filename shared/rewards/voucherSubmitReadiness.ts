@@ -51,7 +51,9 @@ export function evaluateVoucherSubmitReadiness(
     )
   }
   if (campaign.rewardAmountCents <= 0) {
-    blockers.push('No eligible reward is available for this run, so a voucher cannot be claimed.')
+    blockers.push(
+      'Your reward is still unlocking. Finish verification for this completed run, then try again.',
+    )
   }
 
   const campaignReady =

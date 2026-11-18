@@ -20,14 +20,15 @@ function factsForStars(perLevel: number[]) {
 
 describe('Final C readiness contracts', () => {
   it('covers all reward-tier boundaries for the 3-rooftop event', () => {
-    expect(pickTierForStars(2)).toBeNull()
-    expect(pickTierForStars(3)?.amountCents).toBe(5000)
+    expect(pickTierForStars(0)?.amountCents).toBe(5000)
     expect(pickTierForStars(5)?.amountCents).toBe(5000)
     expect(pickTierForStars(6)?.amountCents).toBe(10000)
     expect(pickTierForStars(7)?.amountCents).toBe(10000)
     expect(pickTierForStars(8)?.amountCents).toBe(25000)
     expect(pickTierForStars(9)?.amountCents).toBe(50000)
 
+    const floor = evaluateCampaignReward(factsForStars([1, 1, 1]))
+    expect(floor.eligible && floor.amountCents).toBe(5000)
     const perfect = evaluateCampaignReward(factsForStars([3, 3, 3]))
     expect(perfect.eligible && perfect.amountCents).toBe(50000)
   })

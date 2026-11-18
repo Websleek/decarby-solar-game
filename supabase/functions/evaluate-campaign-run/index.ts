@@ -46,18 +46,31 @@ Deno.serve(async (req) => {
       if (existingDecision.player_id !== profile.id) {
         return publicError(403, 'forbidden', 'Campaign run does not belong to this player.')
       }
-      return jsonResponse({
-        ok: true,
-        idempotent: true,
-        voucherIssued: false,
-        decision: existingDecision.decision,
-        eligible: existingDecision.eligible,
-        tierId: existingDecision.tier_id,
-        amountCents: existingDecision.amount_cents,
-        totalStars: existingDecision.total_stars,
-        totalScore: existingDecision.total_score,
-        nickname: profile.public_nickname,
-      })
+      const prior = existingDecision.decision as { eligible?: boolean; code?: string } | null
+      const incompletePrior =
+        existingDecision.eligible !== true &&
+        prior != null &&
+        prior.eligible === false &&
+        prior.code === 'incomplete_campaign'
+      // Allow re-evaluation once more rooftops are verified.
+      if (!incompletePrior) {
+        return jsonResponse({
+          ok: true,
+          idempotent: true,
+          voucherIssued: false,
+          decision: existingDecision.decision,
+          eligible: existingDecision.eligible,
+          tierId: existingDecision.tier_id,
+          amountCents: existingDecision.amount_cents,
+          totalStars: existingDecision.total_stars,
+          totalScore: existingDecision.total_score,
+          nickname: profile.public_nickname,
+        })
+      }
+      await admin
+        .from('promotional_campaign_reward_decisions')
+        .delete()
+        .eq('id', existingDecision.id)
     }
 
     const { data: run } = await admin

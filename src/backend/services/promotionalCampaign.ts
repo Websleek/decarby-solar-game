@@ -123,6 +123,14 @@ export const promotionalCampaignService = {
       if (payload.voucherIssued === true) {
         throw new BackendError('unsupported', 'Unexpected voucher issuance in Final A.')
       }
+      // Incomplete server decisions must not freeze the run as final "ineligible".
+      const incomplete =
+        payload.decision.eligible === false &&
+        'code' in payload.decision &&
+        payload.decision.code === 'incomplete_campaign'
+      if (incomplete) {
+        return finalizeCampaignReward({ ...run, provisional: true })
+      }
       return {
         ...run,
         reward: payload.decision,

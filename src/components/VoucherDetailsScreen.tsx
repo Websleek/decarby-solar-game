@@ -207,8 +207,11 @@ export function VoucherDetailsScreen({
       <p className="brand-mark">
         <span>Decarby</span> Solar
       </p>
-      <h1>Claim your voucher</h1>
-      <p className="tagline">Enter your name and email. Phone is optional.</p>
+      <h1>Claim your reward</h1>
+      <p className="tagline">
+        Thanks for completing the Decarby Solar Roof Challenge. Enter your details below to receive
+        your reward voucher.
+      </p>
 
       <div className="result-card voucher-summary-card">
         <div className="voucher-summary-grid" aria-label="Campaign reward summary">
@@ -223,13 +226,15 @@ export function VoucherDetailsScreen({
             </strong>
           </div>
           <div>
-            <span>Discount</span>
-            <strong>{view.rewardAmountCents > 0 ? rewardLabel : 'Not eligible'}</strong>
+            <span>Reward</span>
+            <strong>
+              {view.rewardAmountCents > 0 ? rewardLabel : 'Unlocking…'}
+            </strong>
           </div>
         </div>
-        <p className="muted">
-          Discount amount comes from your server-verified campaign result — not this form.
-        </p>
+        {view.rewardAmountCents > 0 && (
+          <p className="muted">Your reward: {rewardLabel}. Phone number is optional.</p>
+        )}
       </div>
 
       {!readiness.campaignReady && (
@@ -307,9 +312,9 @@ export function VoucherDetailsScreen({
               target="_blank"
               rel="noreferrer"
             >
-              Read Decarby Solar information
+              Visit Decarby Solar
             </a>
-            . An approved public terms page is not linked yet.
+            .
           </span>
         </label>
 

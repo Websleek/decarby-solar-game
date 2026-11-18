@@ -206,17 +206,32 @@ export class GameScene extends Phaser.Scene {
       g.fillEllipse(x - w * 0.15, y - 2, w * 0.55, h * 0.7)
     }
 
+    const drawTree = (x: number, y: number, scale = 1) => {
+      g.fillStyle(0x6b4a2e, 1)
+      g.fillRect(x - 3 * scale, y - 6 * scale, 6 * scale, 16 * scale)
+      g.fillStyle(0x3f7d2c, 1)
+      g.fillCircle(x, y - 14 * scale, 14 * scale)
+      g.fillStyle(0x5ea038, 1)
+      g.fillCircle(x - 6 * scale, y - 10 * scale, 9 * scale)
+      g.fillCircle(x + 7 * scale, y - 12 * scale, 8 * scale)
+    }
+
     if (preset === 'garden') {
-      // Walking path
+      // Pathway + garden beds + trees
       g.fillStyle(0xcbb89a, 1)
-      g.fillRoundedRect(width / 2 - 14, roofBottom + 8, 28, yardPad * 0.7, 8)
+      g.fillRoundedRect(width / 2 - 14, roofBottom + 8, 28, yardPad * 0.75, 8)
       g.fillStyle(0xb89f7d, 0.45)
       for (let i = 0; i < 5; i += 1) {
         g.fillRect(width / 2 - 10, roofBottom + 14 + i * 10, 20, 3)
       }
+      g.fillStyle(0x6b8f3a, 1)
+      g.fillEllipse(roofLeft - 30, roofBottom + 6, 36, 16)
+      g.fillEllipse(roofRight + 28, roofBottom + 8, 34, 15)
       shrub(roofLeft - 26, roofTop + 20, 28, 16)
       shrub(roofRight + 24, roofTop + 28, 26, 15)
       shrub(roofLeft - 20, roofBottom - 8, 24, 14)
+      drawTree(roofLeft - 42, roofTop + gridH * 0.35, 0.9)
+      drawTree(roofRight + 40, roofBottom - 20, 0.85)
       g.fillStyle(0xed3363, 0.9)
       g.fillCircle(roofLeft - 16, roofBottom + 10, 3)
       g.fillStyle(0xf5c518, 0.9)
@@ -244,21 +259,42 @@ export class GameScene extends Phaser.Scene {
       g.fillCircle(carX + 23, carY + 44, 3)
       shrub(roofRight + 22, roofTop + 22, 26, 15)
       shrub(roofRight + 18, roofBottom - 10, 22, 13)
+      // Dog house + dog (decorative)
+      const kennelX = Math.min(width - 52, roofRight + 12)
+      const kennelY = roofBottom - 8
+      g.fillStyle(0xb56b3c, 1)
+      g.fillRoundedRect(kennelX, kennelY, 28, 20, 3)
+      g.fillStyle(0x8a4524, 1)
+      g.fillTriangle(kennelX - 2, kennelY, kennelX + 14, kennelY - 12, kennelX + 30, kennelY)
+      g.fillStyle(0x3a2a22, 1)
+      g.fillRoundedRect(kennelX + 8, kennelY + 6, 12, 14, 2)
+      g.fillStyle(0xc4a574, 1)
+      g.fillEllipse(kennelX - 10, kennelY + 16, 16, 10)
+      g.fillCircle(kennelX - 16, kennelY + 10, 5)
+      g.fillStyle(0x2a2a2a, 0.8)
+      g.fillCircle(kennelX - 18, kennelY + 9, 1.2)
     } else {
-      // patio + fence
+      // patio + fence + pool
       const patioX = Math.min(width - 58, roofRight + 10)
-      const patioY = roofTop + gridH * 0.28
+      const patioY = roofTop + gridH * 0.22
       g.fillStyle(0xd2b48c, 1)
-      g.fillRoundedRect(patioX, patioY, 46, 64, 6)
+      g.fillRoundedRect(patioX, patioY, 46, 54, 6)
       g.fillStyle(0xb8956a, 0.55)
-      g.fillRect(patioX + 4, patioY + 12, 38, 2)
-      g.fillRect(patioX + 4, patioY + 32, 38, 2)
-      g.fillRect(patioX + 4, patioY + 52, 38, 2)
+      g.fillRect(patioX + 4, patioY + 10, 38, 2)
+      g.fillRect(patioX + 4, patioY + 26, 38, 2)
+      g.fillRect(patioX + 4, patioY + 42, 38, 2)
       g.fillStyle(0x8b6914, 1)
-      g.fillCircle(patioX + 23, patioY + 30, 8)
+      g.fillCircle(patioX + 23, patioY + 26, 8)
       g.fillStyle(0xc4a35a, 1)
-      g.fillCircle(patioX + 23, patioY + 30, 5)
-      const fenceY = Math.min(height - 18, roofBottom + yardPad * 0.85)
+      g.fillCircle(patioX + 23, patioY + 26, 5)
+      // Pool / pond
+      const poolX = Math.max(18, roofLeft - yardPad + 10)
+      const poolY = roofBottom + 4
+      g.fillStyle(0x4fa3d1, 1)
+      g.fillEllipse(poolX + 28, poolY + 16, 56, 28)
+      g.fillStyle(0x7ec8e8, 0.55)
+      g.fillEllipse(poolX + 22, poolY + 12, 28, 12)
+      const fenceY = Math.min(height - 18, roofBottom + yardPad * 0.9)
       g.fillStyle(0x8d6e4c, 1)
       const fenceLeft = Math.max(16, roofLeft - yardPad + 6)
       const fenceRight = Math.min(width - 16, roofRight + yardPad - 6)
@@ -268,6 +304,7 @@ export class GameScene extends Phaser.Scene {
       }
       shrub(roofLeft - 24, roofTop + 18, 26, 15)
       shrub(roofLeft - 18, roofBottom - 6, 22, 13)
+      shrub(roofRight + 20, roofBottom + 2, 20, 12)
     }
 
     // Roof plate with gutter / fascia — playable area stays clear

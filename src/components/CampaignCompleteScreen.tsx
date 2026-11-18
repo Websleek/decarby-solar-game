@@ -9,12 +9,27 @@ type CampaignCompleteScreenProps = {
   onRetryVerification?: () => void
 }
 
+function StarRow({ stars }: { stars: number }) {
+  const safe = Math.max(0, Math.min(3, Math.floor(stars)))
+  return (
+    <span className="promo-star-row" aria-label={`${safe} of 3 stars`}>
+      {[0, 1, 2].map((index) => (
+        <span key={index} className={index < safe ? 'promo-star is-filled' : 'promo-star is-empty'}>
+          ★
+        </span>
+      ))}
+    </span>
+  )
+}
+
 export function CampaignCompleteScreen({
   view,
   onContinuePlaceholder,
   onHome,
   onRetryVerification,
 }: CampaignCompleteScreenProps) {
+  const hasReward = Boolean(view.rewardLabel && view.rewardAmountCents > 0)
+
   return (
     <section className="screen complete campaign-complete promo-campaign-complete">
       <p className="brand-mark">
@@ -26,7 +41,7 @@ export function CampaignCompleteScreen({
       </p>
 
       <p className="promo-player-chip" aria-label="Player nickname">
-        Player <strong>{view.nickname}</strong>
+        Player: <strong>{view.nickname}</strong>
       </p>
 
       <div className="result-card promo-summary-card" aria-label="Campaign summary">
@@ -41,24 +56,28 @@ export function CampaignCompleteScreen({
             <span>Combined score</span>
             <strong>{view.totalScore.toLocaleString()}</strong>
           </p>
+          <p className="promo-stat">
+            <span>Reward earned</span>
+            <strong>{hasReward ? view.rewardLabel : 'Pending'}</strong>
+          </p>
         </div>
       </div>
 
       <div className="result-card promo-reward-card">
-        {view.rewardLabel ? (
+        {hasReward ? (
           <div className="promo-reward-reveal" role="status">
             <Award size={22} aria-hidden />
             <div>
-              <p>Your eligible reward</p>
-              <strong>{view.rewardLabel}</strong>
+              <p>Congratulations! You’ve unlocked your Decarby Solar reward.</p>
+              <strong>Your reward: {view.rewardLabel}</strong>
             </div>
           </div>
         ) : (
-          <div className="promo-reward-reveal is-ineligible" role="status">
+          <div className="promo-reward-reveal" role="status">
             <Award size={22} aria-hidden />
             <div>
-              <p>No promotional tier unlocked yet</p>
-              <strong>Keep practising for A$50–A$500 OFF</strong>
+              <p>Your reward is almost ready</p>
+              <strong>Complete verification to continue</strong>
             </div>
           </div>
         )}
@@ -69,9 +88,7 @@ export function CampaignCompleteScreen({
           ) : (
             <ShieldAlert size={16} aria-hidden />
           )}
-          {view.serverVerified
-            ? 'Server verified campaign result'
-            : 'Provisional / not fully verified'}
+          {view.serverVerified ? 'Result verified' : 'Waiting for verification'}
         </p>
         <p className="muted promo-eligible-note">{view.voucherEligibleMessaging}</p>
       </div>
@@ -85,11 +102,9 @@ export function CampaignCompleteScreen({
                 L{level.levelNumber} {level.levelTitle}
               </span>
               <strong>
-                {level.stars == null
-                  ? '—'
-                  : `${'★'.repeat(level.stars)}${'☆'.repeat(3 - level.stars)}`}
+                {level.stars == null ? '—' : <StarRow stars={level.stars} />}
               </strong>
-              <em>{level.status}</em>
+              <em>{level.status === 'verified' ? 'verified' : level.status === 'local_complete' ? 'done' : level.status}</em>
             </li>
           ))}
         </ul>
@@ -98,7 +113,7 @@ export function CampaignCompleteScreen({
       <div className="complete-actions">
         <button type="button" className="btn btn-primary" onClick={onContinuePlaceholder}>
           <ArrowRight size={16} aria-hidden />
-          {view.nextStepLabel}
+          Claim Your Reward
         </button>
         {!view.serverVerified && onRetryVerification && (
           <button type="button" className="btn btn-secondary" onClick={onRetryVerification}>

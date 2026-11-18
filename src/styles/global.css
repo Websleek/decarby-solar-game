@@ -2453,8 +2453,25 @@ button:disabled {
 
 .promo-level-stars li strong {
   text-align: right;
-  color: var(--brand-orange);
   letter-spacing: 0.04em;
+}
+
+.promo-star-row {
+  display: inline-flex;
+  gap: 0.12rem;
+}
+
+.promo-star {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.promo-star.is-filled {
+  color: var(--brand-orange);
+}
+
+.promo-star.is-empty {
+  color: #cfc7d8;
 }
 
 .promo-level-stars em {
