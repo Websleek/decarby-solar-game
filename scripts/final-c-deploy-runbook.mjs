@@ -50,9 +50,12 @@ npx supabase functions deploy get-leaderboard --remote=${REF} --use-api
 
 ## D) Edge secrets (never VITE_*)
 npx supabase secrets set RESEND_API_KEY=YOUR_KEY --remote=${REF}
-npx supabase secrets set TRANSACTIONAL_EMAIL_FROM="Decarby Solar <vouchers@YOUR_VERIFIED_DOMAIN>" --remote=${REF}
-# Keep demo delivery unless expressly approved:
+npx supabase secrets set TRANSACTIONAL_EMAIL_FROM="Decarby Solar <vouchers@decarbysolar.com.au>" --remote=${REF}
+# Keep public demo_log unless expressly testing Resend with an allowlist:
 npx supabase secrets set VOUCHER_EMAIL_SEND_DEMO=false --remote=${REF}
+# When testing Resend for non-redeemable demos ONLY:
+# npx supabase secrets set VOUCHER_EMAIL_SEND_DEMO=true --remote=${REF}
+# npx supabase secrets set VOUCHER_EMAIL_TEST_ALLOWLIST=qa@your-domain.com --remote=${REF}
 
 ## E) Resend sender domain
 # 1) Add/verify domain in Resend dashboard
@@ -69,7 +72,7 @@ npx supabase secrets set VOUCHER_EMAIL_SEND_DEMO=false --remote=${REF}
 # Vercel: confirm preview, then promote production after smoke tests
 
 ## G) Post-deploy smoke
-# 1) Nickname → 5 Classic levels → reward reveal
+# 1) Nickname → 3 event rooftops → reward reveal
 # 2) Voucher form → one demo claim → delivery status is demo_log wording
 # 3) Refresh voucher screen → same claim, no second voucher
 # 4) New Player → nickname screen → new anonymous identity

@@ -2653,6 +2653,11 @@ button:disabled {
   text-align: left;
 }
 
+.field-optional {
+  font-weight: 600;
+  color: var(--text-muted, #625d71);
+}
+
 .voucher-claim-form input[type='text'],
 .voucher-claim-form input[type='email'],
 .voucher-claim-form input[type='tel'],

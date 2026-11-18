@@ -24,7 +24,7 @@ function row(
   }
 }
 
-const fiveFor = (playerId: string, nickname: string, score: number): ClassicVerifiedRow[] =>
+const threeFor = (playerId: string, nickname: string, score: number): ClassicVerifiedRow[] =>
   LEADERBOARD_LEVEL_IDS.map((levelId, index) =>
     row({
       playerId,
@@ -36,13 +36,13 @@ const fiveFor = (playerId: string, nickname: string, score: number): ClassicVeri
   )
 
 describe('leaderboard ranking helpers', () => {
-  it('aggregates overall score and requires all five rooftops', () => {
-    const incomplete = fiveFor('p1', 'AlmostThere', 1000).slice(0, 4)
-    const champion = fiveFor('p2', 'SolarAce', 2000)
+  it('aggregates overall score and requires all three event rooftops', () => {
+    const incomplete = threeFor('p1', 'AlmostThere', 1000).slice(0, 2)
+    const champion = threeFor('p2', 'SolarAce', 2000)
     const ranked = rankOverallChampions([...incomplete, ...champion])
     expect(ranked).toHaveLength(1)
     expect(ranked[0]?.publicNickname).toBe('SolarAce')
-    expect(ranked[0]?.totalScore).toBe(2000 + 2001 + 2002 + 2003 + 2004)
+    expect(ranked[0]?.totalScore).toBe(2000 + 2001 + 2002)
   })
 
   it('deduplicates replayed levels by keeping the highest score', () => {
@@ -68,7 +68,7 @@ describe('leaderboard ranking helpers', () => {
       }),
     )
     const ranked = rankOverallChampions([replayLow, replayHigh, ...rest])
-    expect(ranked[0]?.totalScore).toBe(1800 + 1500 * 4)
+    expect(ranked[0]?.totalScore).toBe(1800 + 1500 * 2)
   })
 
   it('keeps weekly leaders inside Canberra week bounds and ignores prior weeks', () => {

@@ -35,8 +35,10 @@ export function ModeSelectScreen({
         <p className="brand-mark">
           <span>Decarby</span> Solar
         </p>
-        <h1>Choose a Mode</h1>
-        <p className="tagline">Classic campaign or speed runs on roofs you have already completed.</p>
+        <h1>More ways to play</h1>
+        <p className="tagline">
+          Extra practice modes. The main event challenge is the 3-rooftop Play Now flow.
+        </p>
       </header>
 
       <div className="mode-cards">
@@ -44,8 +46,8 @@ export function ModeSelectScreen({
           <div className="mode-icon">
             <Landmark size={28} aria-hidden />
           </div>
-          <h2>Classic Mode</h2>
-          <p>Play the five-level campaign, earn stars, and unlock the next rooftop.</p>
+          <h2>Classic practice</h2>
+          <p>Replay rooftops, including optional harder roofs outside the main event path.</p>
         </button>
 
         <button

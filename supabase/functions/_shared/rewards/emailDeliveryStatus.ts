@@ -1,5 +1,5 @@
 /**
- * Final C — user-facing email delivery status copy.
+ * User-facing email delivery status copy.
  * Never claim inbox delivery from demo_log or provider acceptance alone.
  */
 
@@ -13,12 +13,14 @@ export function classifyEmailDelivery(input: {
 }): EmailDeliveryKind {
   if (input.emailStatus === 'failed') return 'failed'
   if (input.emailStatus === 'queued') return 'queued'
-  if (input.emailProvider === 'demo_log' || input.demo || input.redeemable === false) {
-    if (input.emailStatus === 'sent' || input.emailProvider === 'demo_log') return 'demo_log'
+
+  // Provider identity wins over demo/redeemable content flags.
+  if (input.emailProvider === 'demo_log') return 'demo_log'
+  if (input.emailStatus === 'sent' && input.emailProvider === 'resend') {
+    return 'provider_accepted'
   }
-  if (input.emailStatus === 'sent' && input.emailProvider === 'resend') return 'provider_accepted'
   if (input.emailStatus === 'sent') {
-    return input.redeemable === true ? 'provider_accepted' : 'demo_log'
+    return input.demo || input.redeemable === false ? 'demo_log' : 'provider_accepted'
   }
   return 'unknown'
 }
@@ -26,11 +28,11 @@ export function classifyEmailDelivery(input: {
 export function emailDeliveryUserMessage(kind: EmailDeliveryKind): string {
   switch (kind) {
     case 'demo_log':
-      return 'Delivery was recorded in demo mode only — this was not sent to a real inbox.'
+      return 'Delivery was recorded in demo mode only. No email was sent.'
     case 'provider_accepted':
-      return 'The email provider accepted the message. Inbox delivery is not guaranteed.'
+      return 'Your voucher email has been submitted for delivery.'
     case 'failed':
-      return 'Email delivery failed temporarily. Your voucher was preserved and can be retried without issuing a new code.'
+      return "We couldn't send your email. Your voucher record is saved."
     case 'queued':
       return 'Email delivery is queued.'
     default:
@@ -43,4 +45,5 @@ export const FORBIDDEN_INBOX_PHRASES = [
   'sent to your inbox',
   'check your inbox',
   'voucher emailed to you',
+  'delivered to your inbox',
 ] as const

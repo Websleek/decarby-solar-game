@@ -1,14 +1,19 @@
 /** Phase 4A — typed achievement catalog (stable IDs for online verification). */
 
+/** Primary event campaign: easy → medium → hard (max 9 stars). */
 export const CAMPAIGN_LEVEL_IDS = [
   'sunny-house',
   'chimney-challenge',
   'tricky-rooftop',
-  'solar-puzzle-master',
-  'decarby-solar-champion',
 ] as const
 
 export type CampaignLevelId = (typeof CAMPAIGN_LEVEL_IDS)[number]
+
+/** Optional sandbox rooftops kept for “More ways to play” / Time Attack — not campaign. */
+export const OPTIONAL_SANDBOX_LEVEL_IDS = [
+  'solar-puzzle-master',
+  'decarby-solar-champion',
+] as const
 
 export type AchievementIconId =
   | 'spark'
@@ -82,20 +87,20 @@ export const ACHIEVEMENT_REGISTRY = [
   {
     id: 'star_collector',
     title: 'Star Collector',
-    description: 'Earn at least ten stars across the five rooftops.',
+    description: 'Earn at least seven stars across the three rooftops.',
     icon: 'stars',
     displayOrder: 50,
     eligibility:
-      'Sum of best verified Classic stars across the five campaign levels is at least 10.',
+      'Sum of best verified Classic stars across the three campaign levels is at least 7.',
     availability: 'live',
   },
   {
     id: 'solar_champion',
     title: 'Solar Champion',
-    description: 'Verify Classic completions on all five rooftops.',
+    description: 'Verify Classic completions on all three rooftops.',
     icon: 'champion',
     displayOrder: 60,
-    eligibility: 'Verified Classic records on all five active campaign levels.',
+    eligibility: 'Verified Classic records on all three active campaign levels.',
     availability: 'live',
   },
   {
@@ -104,7 +109,7 @@ export const ACHIEVEMENT_REGISTRY = [
     description: 'Earn three stars on every rooftop.',
     icon: 'master',
     displayOrder: 70,
-    eligibility: 'Best verified Classic stars equal 3 on each of the five campaign levels.',
+    eligibility: 'Best verified Classic stars equal 3 on each of the three campaign levels.',
     availability: 'live',
   },
   {

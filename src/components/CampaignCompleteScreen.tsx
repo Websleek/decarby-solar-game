@@ -1,5 +1,6 @@
 import { Award, Home, ArrowRight, ShieldCheck, ShieldAlert } from 'lucide-react'
 import type { CampaignCompleteView } from '../../shared/campaign/types'
+import { MAX_CAMPAIGN_STARS } from '../../shared/campaign/rewardTiers'
 
 type CampaignCompleteScreenProps = {
   view: CampaignCompleteView
@@ -21,8 +22,7 @@ export function CampaignCompleteScreen({
       </p>
       <h1>Congratulations, Solar Champion!</h1>
       <p className="tagline">
-        You powered every rooftop in this campaign run. Review your reward, then continue when you
-        are ready.
+        You powered all three rooftops. Review your score and reward, then claim your voucher.
       </p>
 
       <p className="promo-player-chip" aria-label="Player nickname">
@@ -34,7 +34,7 @@ export function CampaignCompleteScreen({
           <p className="promo-stat">
             <span>Stars</span>
             <strong>
-              {view.totalStars} / 15
+              {view.totalStars} / {MAX_CAMPAIGN_STARS}
             </strong>
           </p>
           <p className="promo-stat">
@@ -100,12 +100,12 @@ export function CampaignCompleteScreen({
           <ArrowRight size={16} aria-hidden />
           {view.nextStepLabel}
         </button>
-        <button type="button" className="btn btn-secondary" onClick={onExploreModes}>
-          More ways to play
-        </button>
         <button type="button" className="btn btn-tertiary" onClick={onHome}>
           <Home size={16} aria-hidden />
           Home
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={onExploreModes}>
+          More ways to play
         </button>
       </div>
     </section>

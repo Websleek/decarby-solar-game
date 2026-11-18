@@ -40,6 +40,23 @@ describe('contact validation', () => {
     expect(normalizeAuPhone('+1 555 123 4567').ok).toBe(false)
   })
 
+  it('allows blank phone as optional', () => {
+    const blank = normalizeAuPhone('')
+    expect(blank.ok).toBe(true)
+    if (blank.ok) expect(blank.value.phone).toBe('')
+
+    const form = validateVoucherContactForm({
+      fullName: 'Jane Citizen',
+      phone: '',
+      email: 'jane@example.com',
+      termsAccepted: true,
+      adultSelfAttested: true,
+      termsVersion: PROMOTIONAL_TERMS_VERSION,
+    })
+    expect(form.ok).toBe(true)
+    if (form.ok) expect(form.value.phone).toBe('')
+  })
+
   it('requires consents and rejects invalid consent', () => {
     const missing = validateVoucherContactForm({
       fullName: 'Jane Citizen',
@@ -93,7 +110,7 @@ describe('unique email ledger (concurrent model)', () => {
   it('allows one claim per email and is idempotent for the same run', async () => {
     const ledger = new InMemoryEmailClaimLedger()
     const base = {
-      campaignId: 'classic-five-rooftop-v1',
+      campaignId: 'event-three-rooftop-v1',
       emailNormalized: 'hero@example.com',
       playerId: 'player-a',
       runId: 'run-1',
@@ -137,8 +154,8 @@ describe('voucher codes and email template', () => {
       redeemable: false,
       termsVersion: PROMOTIONAL_TERMS_VERSION,
     })
-    expect(content.subject.toLowerCase()).toContain('demo')
-    expect(content.text).toMatch(/no redeemable/i)
+    expect(content.subject.toLowerCase()).toMatch(/demo|test/)
+    expect(content.text).toMatch(/not redeemable/i)
   })
 })
 

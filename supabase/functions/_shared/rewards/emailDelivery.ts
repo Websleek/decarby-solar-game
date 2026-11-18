@@ -1,23 +1,37 @@
 /**
- * Final B — Resend (or demo log) transactional delivery.
+ * Resend (or demo log) transactional delivery.
  * Secrets: RESEND_API_KEY, TRANSACTIONAL_EMAIL_FROM — never VITE_*.
+ * Test sends: VOUCHER_EMAIL_SEND_DEMO + VOUCHER_EMAIL_TEST_ALLOWLIST (fail-closed).
  * Provider HTTP acceptance ≠ final inbox delivery.
- *
- * Demo delivery config (default):
- * - Missing secrets OR non-redeemable/demo voucher → structured demo_log acceptance.
- * - Set VOUCHER_EMAIL_SEND_DEMO=true with secrets to actually send branded demo emails via Resend.
  */
 
 import { buildVoucherEmail, type VoucherEmailTemplateInput } from './voucherEmailTemplate.ts'
+import {
+  canSendDemoEmailViaProvider,
+  parseEmailAllowlist,
+} from './emailTestAllowlist.ts'
 
 export type DeliverVoucherEmailInput = VoucherEmailTemplateInput &
   Readonly<{
     toEmail: string
+    /** Stable id for Resend Idempotency-Key — use email job UUID. */
+    emailJobId?: string
   }>
 
 export type EmailDeliveryResult =
-  | Readonly<{ ok: true; provider: string; messageId: string; demoLogged: boolean }>
-  | Readonly<{ ok: false; provider: string; error: string; demoLogged: boolean }>
+  | Readonly<{
+      ok: true
+      provider: 'demo_log' | 'resend'
+      messageId: string
+      demoLogged: boolean
+      reason?: string
+    }>
+  | Readonly<{
+      ok: false
+      provider: 'demo_log' | 'resend'
+      error: string
+      demoLogged: boolean
+    }>
 
 function env(name: string): string | null {
   const value = Deno.env.get(name)
@@ -28,14 +42,18 @@ export function getTransactionalEmailConfig(): {
   apiKey: string | null
   from: string | null
   sendDemoViaProvider: boolean
+  testAllowlist: readonly string[]
 } {
   const flag = env('VOUCHER_EMAIL_SEND_DEMO')
   return {
     apiKey: env('RESEND_API_KEY'),
     from: env('TRANSACTIONAL_EMAIL_FROM'),
     sendDemoViaProvider: flag === '1' || flag === 'true',
+    testAllowlist: parseEmailAllowlist(env('VOUCHER_EMAIL_TEST_ALLOWLIST')),
   }
 }
+
+export { canSendDemoEmailViaProvider } from './emailTestAllowlist.ts'
 
 async function sendViaResend(input: {
   apiKey: string
@@ -44,14 +62,21 @@ async function sendViaResend(input: {
   subject: string
   html: string
   text: string
+  emailJobId?: string
 }): Promise<EmailDeliveryResult> {
   try {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${input.apiKey}`,
+      'Content-Type': 'application/json',
+    }
+    if (input.emailJobId && input.emailJobId.length >= 8) {
+      // Resend Idempotency-Key: retries with the same job id should not create duplicates.
+      headers['Idempotency-Key'] = `voucher-email-job:${input.emailJobId}`
+    }
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${input.apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         from: input.from,
         to: [input.toEmail],
@@ -85,7 +110,11 @@ async function sendViaResend(input: {
   }
 }
 
-function demoLogAccept(subject: string, voucherCode: string): EmailDeliveryResult {
+function demoLogAccept(
+  subject: string,
+  voucherCode: string,
+  reason: string,
+): EmailDeliveryResult {
   console.info(
     JSON.stringify({
       type: 'voucher_email_demo_log',
@@ -93,6 +122,7 @@ function demoLogAccept(subject: string, voucherCode: string): EmailDeliveryResul
       voucherCodePrefix: voucherCode.slice(0, 8),
       demo: true,
       redeemable: false,
+      reason,
     }),
   )
   return {
@@ -100,6 +130,7 @@ function demoLogAccept(subject: string, voucherCode: string): EmailDeliveryResul
     provider: 'demo_log',
     messageId: `demo_${crypto.randomUUID()}`,
     demoLogged: true,
+    reason,
   }
 }
 
@@ -108,14 +139,26 @@ export async function deliverVoucherEmail(
 ): Promise<EmailDeliveryResult> {
   const content = buildVoucherEmail(input)
   const cfg = getTransactionalEmailConfig()
-  const isDemoVoucher = input.demo || !input.redeemable
 
   if (!cfg.apiKey || !cfg.from) {
-    return demoLogAccept(content.subject, input.voucherCode)
+    return demoLogAccept(content.subject, input.voucherCode, 'missing_resend_secrets')
   }
 
-  if (isDemoVoucher && !cfg.sendDemoViaProvider) {
-    return demoLogAccept(content.subject, input.voucherCode)
+  const gate = canSendDemoEmailViaProvider({
+    toEmail: input.toEmail,
+    demo: input.demo,
+    redeemable: input.redeemable,
+    sendDemoViaProvider: cfg.sendDemoViaProvider,
+    testAllowlist: cfg.testAllowlist,
+  })
+
+  if (!gate.allowed) {
+    return demoLogAccept(content.subject, input.voucherCode, gate.reason)
+  }
+
+  // Live redeemable path still requires explicit approved issuance upstream.
+  if (input.redeemable === true && input.demo === false && !cfg.sendDemoViaProvider) {
+    // Live path uses Resend when secrets exist; demo flag is unrelated.
   }
 
   return sendViaResend({
@@ -125,5 +168,6 @@ export async function deliverVoucherEmail(
     subject: content.subject,
     html: content.html,
     text: content.text,
+    emailJobId: input.emailJobId,
   })
 }

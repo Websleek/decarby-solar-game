@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { ArrowLeft, Home, Mail, ShieldCheck, UserPlus, Trophy } from 'lucide-react'
 import type { CampaignCompleteView } from '../../shared/campaign/types'
+import { MAX_CAMPAIGN_STARS } from '../../shared/campaign/rewardTiers'
 import {
   classifyEmailDelivery,
   emailDeliveryUserMessage,
@@ -118,7 +119,7 @@ export function VoucherDetailsScreen({
             <div>
               <span>Stars</span>
               <strong>
-                {view.totalStars} / 15
+                {view.totalStars} / {MAX_CAMPAIGN_STARS}
               </strong>
             </div>
             <div>
@@ -180,7 +181,7 @@ export function VoucherDetailsScreen({
           <div>
             <span>Stars</span>
             <strong>
-              {view.totalStars} / 15
+              {view.totalStars} / {MAX_CAMPAIGN_STARS}
             </strong>
           </div>
           <div>
@@ -209,23 +210,6 @@ export function VoucherDetailsScreen({
           />
         </label>
 
-        <label className="field" htmlFor={`${formId}-phone`}>
-          Mobile / phone number
-          <input
-            id={`${formId}-phone`}
-            name="phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            required
-            maxLength={32}
-            placeholder="04xx xxx xxx"
-            value={form.phone}
-            disabled={busy}
-            onChange={(event) => update('phone', event.target.value)}
-          />
-        </label>
-
         <label className="field" htmlFor={`${formId}-email`}>
           Email address
           <input
@@ -239,6 +223,22 @@ export function VoucherDetailsScreen({
             value={form.email}
             disabled={busy}
             onChange={(event) => update('email', event.target.value)}
+          />
+        </label>
+
+        <label className="field" htmlFor={`${formId}-phone`}>
+          Mobile / phone number <span className="field-optional">(optional)</span>
+          <input
+            id={`${formId}-phone`}
+            name="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            maxLength={32}
+            placeholder="04xx xxx xxx"
+            value={form.phone}
+            disabled={busy}
+            onChange={(event) => update('phone', event.target.value)}
           />
         </label>
 

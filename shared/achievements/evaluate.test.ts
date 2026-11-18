@@ -51,7 +51,7 @@ describe('achievement evaluation', () => {
     expect(result.eligible).not.toContain('perfect_fit')
   })
 
-  it('requires ten best stars and deduplicates by level', () => {
+  it('requires seven best stars and deduplicates by level', () => {
     const duplicateSunny = [
       {
         levelId: 'sunny-house',
@@ -77,7 +77,7 @@ describe('achievement evaluation', () => {
       timeAttackRecords: [],
       leaderboardStandings: [],
     })
-    // 3 + 2*4 = 11
+    // 3 + 2 + 2 = 7
     expect(result.eligible).toContain('star_collector')
     expect(result.eligible).toContain('solar_champion')
   })

@@ -1,3 +1,4 @@
+import { CAMPAIGN_LEVEL_IDS } from '../../shared/achievements/registry'
 import type { LevelDefinition } from '../types/game'
 import type { LevelService } from '../types/services'
 import { LEVEL_1_SUNNY_HOUSE } from './level1'
@@ -6,6 +7,7 @@ import { LEVEL_3_TRICKY } from './level3'
 import { LEVEL_4_MASTER } from './level4'
 import { LEVEL_5_CHAMPION } from './level5'
 
+/** Full catalog (event campaign + optional sandbox rooftops). */
 const LEVELS: readonly LevelDefinition[] = [
   LEVEL_1_SUNNY_HOUSE,
   LEVEL_2_CHIMNEY,
@@ -26,10 +28,26 @@ export function listLocalLevels(): LevelDefinition[] {
   return [...LEVELS].sort((a, b) => a.number - b.number)
 }
 
+/** Primary event campaign rooftops only (easy → medium → hard). */
+export function listCampaignLevels(): LevelDefinition[] {
+  return CAMPAIGN_LEVEL_IDS.map((id) => LEVEL_BY_ID[id]!).filter(Boolean)
+}
+
 export function getNextLevel(levelId: string): LevelDefinition | undefined {
   const current = getLevelById(levelId)
   if (!current) return undefined
   return LEVELS.find((level) => level.number === current.number + 1)
+}
+
+/** Next rooftop inside the 3-level event campaign. */
+export function getNextCampaignLevel(levelId: string): LevelDefinition | undefined {
+  const index = (CAMPAIGN_LEVEL_IDS as readonly string[]).indexOf(levelId)
+  if (index < 0 || index >= CAMPAIGN_LEVEL_IDS.length - 1) return undefined
+  return getLevelById(CAMPAIGN_LEVEL_IDS[index + 1]!)
+}
+
+export function isFinalCampaignLevel(levelId: string): boolean {
+  return levelId === CAMPAIGN_LEVEL_IDS[CAMPAIGN_LEVEL_IDS.length - 1]
 }
 
 export function getFirstLevel(): LevelDefinition {

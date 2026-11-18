@@ -10,7 +10,11 @@ import {
   AchievementToastHost,
   type AchievementToastItem,
 } from './components/AchievementToastHost'
-import { ACHIEVEMENT_BY_ID, type VerifiedAchievementId } from '../shared/achievements/registry'
+import {
+  ACHIEVEMENT_BY_ID,
+  CAMPAIGN_LEVEL_IDS,
+  type VerifiedAchievementId,
+} from '../shared/achievements/registry'
 import { LevelSelectScreen } from './components/LevelSelectScreen'
 import { GameplayScreen } from './components/GameplayScreen'
 import { LevelCompleteScreen } from './components/LevelCompleteScreen'
@@ -25,7 +29,13 @@ import {
   shouldConfirmResetBeforeFinish,
 } from './services/playerSessionReset'
 import { readCachedClaimResult } from './services/claimResultCache'
-import { getFirstLevel, getLevelById, getNextLevel, LEVEL_5_CHAMPION } from './levels'
+import {
+  getFirstLevel,
+  getLevelById,
+  getNextCampaignLevel,
+  getNextLevel,
+  isFinalCampaignLevel,
+} from './levels'
 import {
   getLevelScoreDisplay,
   isLevelUnlocked,
@@ -317,13 +327,7 @@ export default function App() {
     if (!run && progress) {
       // Standalone Classic finish (outside promotional Play Now flow).
       let built = promotionalCampaignService.createOfflineRun('Solar Player')
-      for (const levelId of [
-        'sunny-house',
-        'chimney-challenge',
-        'tricky-rooftop',
-        'solar-puzzle-master',
-        'decarby-solar-champion',
-      ] as const) {
+      for (const levelId of CAMPAIGN_LEVEL_IDS) {
         built = promotionalCampaignService.recordLocalComplete(built, {
           levelId,
           stars: progress.bestStars[levelId] ?? 0,
@@ -403,14 +407,24 @@ export default function App() {
   }, [activeLevelId, gameMode, startLevel])
 
   const handleNextLevel = useCallback(() => {
-    const next = getNextLevel(activeLevelId)
+    const next = promoFlowActive
+      ? getNextCampaignLevel(activeLevelId)
+      : getNextLevel(activeLevelId)
     if (next) void startLevel(next.id, 'classic')
-  }, [activeLevelId, startLevel])
+  }, [activeLevelId, promoFlowActive, startLevel])
 
-  const nextLevel = result ? getNextLevel(result.levelId) : undefined
+  const nextLevel = result
+    ? promoFlowActive
+      ? getNextCampaignLevel(result.levelId)
+      : getNextLevel(result.levelId)
+    : undefined
   const nextUnlocked =
-    !!progress && !!nextLevel && progress.unlockedLevels.includes(nextLevel.id)
-  const isFinalLevel = activeLevelId === LEVEL_5_CHAMPION.id
+    !!progress &&
+    !!nextLevel &&
+    (promoFlowActive || progress.unlockedLevels.includes(nextLevel.id))
+  const isFinalLevel = promoFlowActive
+    ? isFinalCampaignLevel(activeLevelId)
+    : activeLevelId === 'decarby-solar-champion'
 
   const previousBestScore =
     progress && engine

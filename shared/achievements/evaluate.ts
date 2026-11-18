@@ -96,15 +96,15 @@ export function evaluateVerifiedAchievements(
   for (const levelId of CAMPAIGN_LEVEL_IDS) {
     starSum += stars.get(levelId) ?? 0
   }
-  if (starSum >= 10) {
+  if (starSum >= 7) {
     eligible.add('star_collector')
     reasons.star_collector = `Best verified stars across campaign levels sum to ${starSum}.`
   }
 
-  const allFive = CAMPAIGN_LEVEL_IDS.every((id) => completedClassic.has(id))
-  if (allFive) {
+  const allCampaign = CAMPAIGN_LEVEL_IDS.every((id) => completedClassic.has(id))
+  if (allCampaign) {
     eligible.add('solar_champion')
-    reasons.solar_champion = 'Verified Classic completions on all five campaign levels.'
+    reasons.solar_champion = 'Verified Classic completions on all three campaign levels.'
   }
 
   const threeStarAll = CAMPAIGN_LEVEL_IDS.every((id) => (stars.get(id) ?? 0) >= 3)

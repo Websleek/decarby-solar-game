@@ -51,7 +51,7 @@ describe('achievement evaluation', () => {
     expect(result.eligible).not.toContain('perfect_fit')
   })
 
-  it('requires ten best stars and deduplicates by level', () => {
+  it('requires seven best stars and deduplicates by level', () => {
     const duplicateSunny = [
       {
         levelId: 'sunny-house',
@@ -77,7 +77,7 @@ describe('achievement evaluation', () => {
       timeAttackRecords: [],
       leaderboardStandings: [],
     })
-    // 3 + 2*4 = 11
+    // 3 + 2 + 2 = 7
     expect(result.eligible).toContain('star_collector')
     expect(result.eligible).toContain('solar_champion')
   })
@@ -149,7 +149,7 @@ describe('achievement evaluation', () => {
       award: async ({ achievementId }) => {
         const inserted = !seen.has(achievementId)
         seen.add(achievementId)
-        return { inserted, earnedAt: '2026-11-10T00:00:00.000Z' }
+        return { ok: true, inserted, earnedAt: '2026-11-10T00:00:00.000Z' }
       },
     })
 
@@ -167,10 +167,29 @@ describe('achievement evaluation', () => {
       award: async ({ achievementId }) => {
         const inserted = !seen.has(achievementId)
         seen.add(achievementId)
-        return { inserted, earnedAt: '2026-11-10T00:00:00.000Z' }
+        return { ok: true, inserted, earnedAt: '2026-11-10T00:00:00.000Z' }
       },
     })
     expect(second.every((row) => row.inserted === false)).toBe(true)
+  })
+
+  it('does not treat eligibility or failed award sinks as persisted unlocks', async () => {
+    const awards = await syncPlayerAchievements({
+      snapshot: {
+        classicRecords: [
+          {
+            levelId: 'sunny-house',
+            verifiedStars: 2,
+            verifiedInvalidPlacements: 0,
+            hasSuccessfulPlacement: true,
+          },
+        ],
+        timeAttackRecords: [],
+        leaderboardStandings: [],
+      },
+      award: async () => ({ ok: false, error: 'not_persisted' }),
+    })
+    expect(awards).toEqual([])
   })
 
   it('unlocks multiple achievements from one completion snapshot', () => {

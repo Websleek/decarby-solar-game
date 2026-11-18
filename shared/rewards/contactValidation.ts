@@ -24,6 +24,7 @@ export type VoucherContactInput = Readonly<{
 
 export type ValidatedVoucherContact = Readonly<{
   fullName: string
+  /** Empty string when the player skipped phone (optional field). */
   phone: string
   emailRaw: string
   emailNormalized: string
@@ -97,14 +98,30 @@ export function validateFullName(input: unknown): ContactValidationResult {
 
 /**
  * Australian phone numbers (mobile or landline), with optional +61 / 0 trunk.
- * Stored as a compact digit string with leading + for international form when possible.
+ * Empty / whitespace-only input is allowed (phone is optional at claim time).
+ * Stored as a compact digit string with leading + for international form when present.
  */
 export function normalizeAuPhone(input: unknown): ContactValidationResult {
+  if (input == null || (typeof input === 'string' && input.trim().length === 0)) {
+    return {
+      ok: true,
+      value: {
+        fullName: '',
+        phone: '',
+        emailRaw: '',
+        emailNormalized: '',
+        termsAccepted: true,
+        adultSelfAttested: true,
+        marketingOptIn: false,
+        termsVersion: PROMOTIONAL_TERMS_VERSION,
+      },
+    }
+  }
   if (typeof input !== 'string') {
     return {
       ok: false,
       code: 'invalid_phone',
-      reason: 'Enter a valid Australian phone number.',
+      reason: 'Enter a valid Australian phone number, or leave blank.',
       field: 'phone',
     }
   }
@@ -112,11 +129,11 @@ export function normalizeAuPhone(input: unknown): ContactValidationResult {
     return { ok: false, code: 'oversized_input', reason: 'Phone number is too long.', field: 'phone' }
   }
   const trimmed = input.trim()
-  if (!trimmed || trimmed.length > PHONE_MAX) {
+  if (trimmed.length > PHONE_MAX) {
     return {
       ok: false,
       code: 'invalid_phone',
-      reason: 'Enter a valid Australian phone number.',
+      reason: 'Enter a valid Australian phone number, or leave blank.',
       field: 'phone',
     }
   }

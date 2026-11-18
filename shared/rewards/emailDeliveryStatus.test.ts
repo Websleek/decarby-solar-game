@@ -16,7 +16,7 @@ describe('email delivery status messaging', () => {
     expect(kind).toBe('demo_log')
     const message = emailDeliveryUserMessage(kind).toLowerCase()
     expect(message).toMatch(/demo mode/)
-    expect(message).toMatch(/not sent to a real inbox/)
+    expect(message).toMatch(/no email was sent/)
     for (const phrase of FORBIDDEN_INBOX_PHRASES) {
       expect(message).not.toContain(phrase)
     }
@@ -30,12 +30,12 @@ describe('email delivery status messaging', () => {
       redeemable: true,
     })
     expect(kind).toBe('provider_accepted')
-    expect(emailDeliveryUserMessage(kind).toLowerCase()).toMatch(/not guaranteed/)
+    expect(emailDeliveryUserMessage(kind).toLowerCase()).toMatch(/submitted for delivery/)
   })
 
-  it('preserves failed/retry messaging without minting language', () => {
+  it('preserves failed messaging without minting language', () => {
     const message = emailDeliveryUserMessage('failed').toLowerCase()
-    expect(message).toMatch(/preserved/)
-    expect(message).toMatch(/retried|retry/)
+    expect(message).toMatch(/voucher record is saved/)
+    expect(message).not.toMatch(/new voucher|another voucher/)
   })
 })

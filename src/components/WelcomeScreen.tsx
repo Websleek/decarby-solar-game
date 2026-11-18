@@ -30,7 +30,9 @@ export function WelcomeScreen({
           <span>Decarby</span> Solar
         </p>
         <h1>Solar Roof Challenge</h1>
-        <p className="tagline">Fit the Panels. Power the Roof. Become a Solar Champion!</p>
+        <p className="tagline">
+          Fit the panels across three rooftops. Earn stars. Claim your Decarby reward.
+        </p>
         <HouseIllustration className="house-illustration" />
         <div className="welcome-actions">
           <button type="button" className="btn btn-primary" onClick={onPlay}>

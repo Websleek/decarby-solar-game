@@ -36,12 +36,11 @@ export type RankedSpeedEntry = Readonly<{
   verifiedScore: number
 }>
 
+/** Overall Champions require the primary event rooftops (3-level campaign). */
 export const LEADERBOARD_LEVEL_IDS = [
   'sunny-house',
   'chimney-challenge',
   'tricky-rooftop',
-  'solar-puzzle-master',
-  'decarby-solar-champion',
 ] as const
 
 function isEligibleClassic(row: ClassicVerifiedRow): boolean {

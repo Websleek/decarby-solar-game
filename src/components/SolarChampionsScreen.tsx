@@ -158,7 +158,7 @@ function getEmptyCopy({
     return {
       title: 'No Overall Champions yet',
       body:
-        'A player needs verified Classic bests on all five active rooftops before they appear here. Local play still works anytime.',
+        'A player needs verified Classic bests on all three event rooftops before they appear here. Local play still works anytime.',
     }
   }
   if (board === 'weekly') {
@@ -282,7 +282,7 @@ export function SolarChampionsScreen({
 
   const ruleCopy =
     board === 'overall'
-      ? 'Overall Champions need a verified Classic best on all five active rooftops. Only one best per rooftop counts.'
+      ? 'Overall Champions need a verified Classic best on all three event rooftops. Only one best per rooftop counts.'
       : board === 'weekly'
         ? 'Weekly Leaders sum verified Classic scores recorded in the current Canberra competition week.'
         : board === 'rooftop'

@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
 
     const { data: decision } = await auth.admin
       .from('promotional_campaign_reward_decisions')
-      .select('id, eligible, amount_cents, tier_id, player_id')
+      .select('id, eligible, amount_cents, tier_id, player_id, total_stars')
       .eq('run_id', runId)
       .maybeSingle()
 
@@ -173,6 +173,9 @@ Deno.serve(async (req) => {
         demo,
         redeemable,
         termsVersion: config.termsVersion,
+        totalStars:
+          typeof decision.total_stars === 'number' ? Number(decision.total_stars) : undefined,
+        emailJobId,
       })
 
       await auth.admin.rpc('mark_voucher_email_job_result', {
@@ -181,6 +184,10 @@ Deno.serve(async (req) => {
         p_provider_message_id: delivery.ok ? delivery.messageId : null,
         p_error: delivery.ok ? null : delivery.error,
       })
+      await auth.admin
+        .from('promotional_voucher_email_jobs')
+        .update({ provider: delivery.provider })
+        .eq('id', emailJobId)
       deliveryStatus = delivery.ok ? 'sent' : 'failed'
       emailProvider =
         delivery.provider === 'demo_log'
@@ -189,7 +196,19 @@ Deno.serve(async (req) => {
             ? 'resend'
             : 'unknown'
     } else if (emailStatus === 'sent') {
-      emailProvider = demo || !redeemable ? 'demo_log' : 'resend'
+      const { data: priorJob } = await auth.admin
+        .from('promotional_voucher_email_jobs')
+        .select('provider')
+        .eq('id', emailJobId)
+        .maybeSingle()
+      emailProvider =
+        priorJob?.provider === 'resend'
+          ? 'resend'
+          : priorJob?.provider === 'demo_log'
+            ? 'demo_log'
+            : demo || !redeemable
+              ? 'demo_log'
+              : 'resend'
     }
 
     const message = successMessage({ demo, redeemable, idempotent })

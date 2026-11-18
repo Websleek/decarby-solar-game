@@ -15,8 +15,6 @@ const LEVEL_TITLES: Record<CampaignLevelId, { title: string; number: number }> =
   'sunny-house': { title: 'Sunny House', number: 1 },
   'chimney-challenge': { title: 'Chimney Challenge', number: 2 },
   'tricky-rooftop': { title: 'Tricky Rooftop', number: 3 },
-  'solar-puzzle-master': { title: 'Solar Puzzle Master', number: 4 },
-  'decarby-solar-champion': { title: 'Decarby Solar Champion', number: 5 },
 }
 
 export function createEmptyCampaignSlots(): CampaignLevelSlot[] {
@@ -198,6 +196,6 @@ export function toCampaignCompleteView(run: PromotionalCampaignRun): CampaignCom
     rewardAmountCents: run.reward?.eligible ? run.reward.amountCents : 0,
     serverVerified,
     voucherEligibleMessaging,
-    nextStepLabel: 'Continue to Voucher Details',
+    nextStepLabel: 'Continue to claim your voucher',
   }
 }

@@ -68,6 +68,18 @@ Deno.serve(async (req) => {
       .maybeSingle()
     const config = parseIssuanceConfigRow(configRow)
 
+    // Do not mint a second voucher; reuse the same job id as Idempotency-Key.
+    if (job.status === 'sent' && job.provider === 'resend') {
+      return jsonResponse({
+        ok: true,
+        claimId,
+        emailStatus: 'sent',
+        emailProvider: 'resend',
+        message: 'Your voucher email has been submitted for delivery.',
+        idempotent: true,
+      })
+    }
+
     const delivery = await deliverVoucherEmail({
       toEmail: claim.email_normalized,
       fullName: claim.full_name,
@@ -77,6 +89,7 @@ Deno.serve(async (req) => {
       demo: voucher.demo === true,
       redeemable: voucher.redeemable === true,
       termsVersion: config.termsVersion,
+      emailJobId: String(job.id),
     })
 
     await auth.admin.rpc('mark_voucher_email_job_result', {
@@ -86,13 +99,24 @@ Deno.serve(async (req) => {
       p_error: delivery.ok ? null : delivery.error,
     })
 
+    // Persist provider name for honest UI on later reads.
+    if (delivery.ok || !delivery.ok) {
+      await auth.admin
+        .from('promotional_voucher_email_jobs')
+        .update({ provider: delivery.provider })
+        .eq('id', job.id)
+    }
+
     return jsonResponse({
       ok: delivery.ok,
       claimId,
       emailStatus: delivery.ok ? 'sent' : 'failed',
+      emailProvider: delivery.provider,
       message: delivery.ok
-        ? 'Delivery accepted by the email provider (or demo log). Inbox delivery is not guaranteed.'
-        : 'Email delivery failed. The original voucher was preserved for retry.',
+        ? delivery.provider === 'demo_log'
+          ? 'Delivery was recorded in demo mode only. No email was sent.'
+          : 'Your voucher email has been submitted for delivery.'
+        : "We couldn't send your email. Your voucher record is saved.",
       code: delivery.ok ? undefined : 'email_failed',
     })
   } catch (error) {

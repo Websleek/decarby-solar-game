@@ -19,23 +19,22 @@ function factsForStars(perLevel: number[]) {
 }
 
 describe('Final C readiness contracts', () => {
-  it('covers all reward-tier boundaries', () => {
-    expect(pickTierForStars(4)).toBeNull()
+  it('covers all reward-tier boundaries for the 3-rooftop event', () => {
+    expect(pickTierForStars(2)).toBeNull()
+    expect(pickTierForStars(3)?.amountCents).toBe(5000)
     expect(pickTierForStars(5)?.amountCents).toBe(5000)
-    expect(pickTierForStars(9)?.amountCents).toBe(5000)
-    expect(pickTierForStars(10)?.amountCents).toBe(10000)
-    expect(pickTierForStars(12)?.amountCents).toBe(10000)
-    expect(pickTierForStars(13)?.amountCents).toBe(25000)
-    expect(pickTierForStars(14)?.amountCents).toBe(25000)
-    expect(pickTierForStars(15)?.amountCents).toBe(50000)
+    expect(pickTierForStars(6)?.amountCents).toBe(10000)
+    expect(pickTierForStars(7)?.amountCents).toBe(10000)
+    expect(pickTierForStars(8)?.amountCents).toBe(25000)
+    expect(pickTierForStars(9)?.amountCents).toBe(50000)
 
-    const fifteen = evaluateCampaignReward(factsForStars([3, 3, 3, 3, 3]))
-    expect(fifteen.eligible && fifteen.amountCents).toBe(50000)
+    const perfect = evaluateCampaignReward(factsForStars([3, 3, 3]))
+    expect(perfect.eligible && perfect.amountCents).toBe(50000)
   })
 
-  it('keeps five-level campaign integrity and rejects incomplete runs', () => {
+  it('keeps three-level campaign integrity and rejects incomplete runs', () => {
     const incomplete = evaluateCampaignReward(
-      CAMPAIGN_LEVEL_IDS.slice(0, 4).map((levelId, index) => ({
+      CAMPAIGN_LEVEL_IDS.slice(0, 2).map((levelId, index) => ({
         levelId,
         verifiedStars: 3,
         verifiedScore: 1000 + index,
@@ -50,13 +49,13 @@ describe('Final C readiness contracts', () => {
     expect(isRedeemableIssuance(DEMO_SEED_ISSUANCE)).toBe(false)
     const ledger = new InMemoryEmailClaimLedger()
     const first = ledger.tryReserve({
-      campaignId: 'classic-five-rooftop-v1',
+      campaignId: 'event-three-rooftop-v1',
       emailNormalized: 'a@example.com',
       playerId: 'p1',
       runId: 'r1',
     })
     const dup = ledger.tryReserve({
-      campaignId: 'classic-five-rooftop-v1',
+      campaignId: 'event-three-rooftop-v1',
       emailNormalized: 'a@example.com',
       playerId: 'p2',
       runId: 'r2',
@@ -74,6 +73,7 @@ describe('Final C readiness contracts', () => {
     expect(migrations).toContain('20260326000000_final_a_campaign_runs.sql')
     expect(migrations).toContain('20260327000000_final_b_voucher_claims.sql')
     expect(migrations).toContain('20260328000000_final_c_snapshot_atomicity.sql')
+    expect(migrations).toContain('20260329000000_event_three_rooftop_v1.sql')
 
     const finalB = readFileSync(
       resolve(root, 'supabase/migrations/20260327000000_final_b_voucher_claims.sql'),

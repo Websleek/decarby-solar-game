@@ -1,15 +1,20 @@
 /**
- * Final A — promotional campaign reward tiers (AUD cents).
+ * Event campaign reward tiers (AUD cents) for the 3-rooftop primary flow.
  * Pure, authoritative calculator shared by client and server.
- * Not redeemable / not an issued voucher.
+ * Thresholds are intentionally easy to retune via REWARD_TIERS.
  */
 
 import { CAMPAIGN_LEVEL_IDS, type CampaignLevelId } from '../achievements/registry.ts'
 
-export const PROMOTIONAL_CAMPAIGN_ID = 'classic-five-rooftop-v1' as const
+export const PROMOTIONAL_CAMPAIGN_ID = 'event-three-rooftop-v1' as const
 export const PROMOTIONAL_CAMPAIGN_VERSION = 1 as const
 
 export const REWARD_CURRENCY = 'AUD' as const
+export const MAX_STARS_PER_LEVEL = 3 as const
+/** Max stars for a full 3-level campaign run. */
+export const MAX_CAMPAIGN_STARS = CAMPAIGN_LEVEL_IDS.length * MAX_STARS_PER_LEVEL
+/** Minimum total stars for the lowest promotional tier. */
+export const MIN_REWARD_STARS = 3 as const
 
 export const REWARD_TIER_IDS = ['tier_500', 'tier_250', 'tier_100', 'tier_50'] as const
 export type RewardTierId = (typeof REWARD_TIER_IDS)[number]
@@ -22,33 +27,38 @@ export type RewardTierDefinition = Readonly<{
   displayLabel: string
 }>
 
-/** Inclusive star ranges. Higher tiers win when ranges are checked top-down. */
+/**
+ * Inclusive star ranges for total stars across 3 rooftops (max 9).
+ * Higher tiers win when ranges are checked top-down.
+ *
+ * Adjust bands here only — evaluateCampaignReward stays shared.
+ */
 export const REWARD_TIERS: readonly RewardTierDefinition[] = Object.freeze([
   {
     id: 'tier_500',
-    minStars: 15,
-    maxStars: 15,
+    minStars: 9,
+    maxStars: 9,
     amountCents: 50_000,
     displayLabel: 'A$500 OFF',
   },
   {
     id: 'tier_250',
-    minStars: 13,
-    maxStars: 14,
+    minStars: 8,
+    maxStars: 8,
     amountCents: 25_000,
     displayLabel: 'A$250 OFF',
   },
   {
     id: 'tier_100',
-    minStars: 10,
-    maxStars: 12,
+    minStars: 6,
+    maxStars: 7,
     amountCents: 10_000,
     displayLabel: 'A$100 OFF',
   },
   {
     id: 'tier_50',
-    minStars: 5,
-    maxStars: 9,
+    minStars: MIN_REWARD_STARS,
+    maxStars: 5,
     amountCents: 5_000,
     displayLabel: 'A$50 OFF',
   },
@@ -109,7 +119,7 @@ export function pickTierForStars(totalStars: number): RewardTierDefinition | nul
 }
 
 /**
- * Evaluate promotional eligibility from a single qualifying run's verified Classic results.
+ * Evaluate promotional eligibility from a single qualifying run's verified results.
  * Does not accept localStorage stars or unrelated personal-best history.
  */
 export function evaluateCampaignReward(
@@ -125,7 +135,11 @@ export function evaluateCampaignReward(
     if (byLevel.has(row.levelId)) {
       return ineligible('duplicate_level', 0, 0, `Duplicate verified result for ${row.levelId}.`)
     }
-    if (!Number.isInteger(row.verifiedStars) || row.verifiedStars < 0 || row.verifiedStars > 3) {
+    if (
+      !Number.isInteger(row.verifiedStars) ||
+      row.verifiedStars < 0 ||
+      row.verifiedStars > MAX_STARS_PER_LEVEL
+    ) {
       return ineligible('invalid_stars', 0, 0, `Invalid stars for ${row.levelId}.`)
     }
     if (!row.verifiedRecordId || typeof row.verifiedRecordId !== 'string') {
@@ -143,7 +157,7 @@ export function evaluateCampaignReward(
       'incomplete_campaign',
       sumStars(byLevel),
       totalScore,
-      `Requires verified Classic results for all ${CAMPAIGN_LEVEL_IDS.length} rooftops in this run.`,
+      `Requires verified results for all ${CAMPAIGN_LEVEL_IDS.length} rooftops in this run.`,
     )
   }
 
@@ -169,7 +183,7 @@ export function evaluateCampaignReward(
       'below_minimum_stars',
       totalStars,
       totalScore,
-      `Total stars ${totalStars} is below the A$50 OFF minimum (5).`,
+      `Total stars ${totalStars} is below the A$50 OFF minimum (${MIN_REWARD_STARS}).`,
     )
   }
 
@@ -181,7 +195,7 @@ export function evaluateCampaignReward(
     displayLabel: tier.displayLabel,
     totalStars,
     totalScore,
-    reason: `Qualifying run total ${totalStars}/15 stars → ${tier.displayLabel}.`,
+    reason: `Qualifying run total ${totalStars}/${MAX_CAMPAIGN_STARS} stars → ${tier.displayLabel}.`,
   }
 }
 

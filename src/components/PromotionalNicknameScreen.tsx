@@ -49,7 +49,7 @@ export function PromotionalNicknameScreen({
         </p>
         <h1>Choose your player name</h1>
         <p className="tagline">
-          Pick a public nickname, then power all five rooftops. No email or phone needed to play.
+          Pick a public nickname, then power three rooftops. No email or phone needed to play.
         </p>
       </header>
 
@@ -83,7 +83,7 @@ export function PromotionalNicknameScreen({
             onClick={() => void submit('online')}
           >
             <Play size={18} aria-hidden />
-            Start 5-rooftop challenge
+            Start 3-rooftop challenge
           </button>
         ) : (
           <button
