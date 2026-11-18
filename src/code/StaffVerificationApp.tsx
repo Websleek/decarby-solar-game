@@ -68,7 +68,7 @@ export function StaffVerificationApp() {
       try {
         const result = await staffLogin(password)
         if (!result.ok) {
-          setAuthError(result.message ?? 'Incorrect password.')
+          setAuthError(result.message ?? 'Could not sign in. Try again.')
           return
         }
         setPassword('')

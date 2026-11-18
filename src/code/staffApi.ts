@@ -25,6 +25,22 @@ export async function fetchStaffSession(): Promise<{ authenticated: boolean; exp
   }
 }
 
+function loginFallbackMessage(status: number, code?: string): string {
+  if (code === 'rate_limited' || status === 429) {
+    return 'Too many password attempts. Try again later.'
+  }
+  if (code === 'invalid_hash_config') {
+    return 'Staff password configuration is invalid. Ask an admin to re-set STAFF_PASSWORD_HASH.'
+  }
+  if (code === 'misconfigured' || status >= 500) {
+    return 'Staff authentication is not configured on the server.'
+  }
+  if (code === 'invalid_password' || status === 401) {
+    return 'Incorrect password.'
+  }
+  return 'Could not sign in. Try again.'
+}
+
 export async function staffLogin(password: string): Promise<{
   ok: boolean
   code?: string
@@ -38,10 +54,15 @@ export async function staffLogin(password: string): Promise<{
     body: JSON.stringify({ password }),
   })
   const body = await parseJson(res)
+  const code = typeof body.code === 'string' ? body.code : undefined
+  const message =
+    typeof body.message === 'string' && body.message.trim()
+      ? body.message
+      : loginFallbackMessage(res.status, code)
   return {
     ok: res.ok && body.ok === true,
-    code: typeof body.code === 'string' ? body.code : undefined,
-    message: typeof body.message === 'string' ? body.message : undefined,
+    code,
+    message,
     expiresAt: typeof body.expiresAt === 'string' ? body.expiresAt : undefined,
   }
 }

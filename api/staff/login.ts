@@ -1,5 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { verifyStaffPassword } from '../../shared/staff/staffPassword'
+import {
+  inspectStaffPasswordHash,
+  verifyStaffPasswordDetailed,
+} from '../../shared/staff/staffPassword'
 import {
   STAFF_SESSION_TTL_SECONDS,
   createStaffSessionToken,
@@ -18,6 +21,15 @@ import {
 } from '../_lib/rateLimit'
 import { getServiceClient } from '../_lib/supabaseAdmin'
 
+function logLoginDiag(category: string, detail?: string): void {
+  // Never log passwords, hashes, or secrets — categories only.
+  if (detail) {
+    console.error(`staff_login:${category}`, detail)
+    return
+  }
+  console.error(`staff_login:${category}`)
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
     json(res, 405, { ok: false, code: 'method_not_allowed', message: 'POST only.' })
@@ -26,7 +38,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   const passwordHash = staffPasswordHash()
   const sessionSecret = staffSessionSecret()
-  if (!passwordHash || !sessionSecret || sessionSecret.length < 32) {
+  const hashInspection = inspectStaffPasswordHash(passwordHash)
+
+  if (!sessionSecret || sessionSecret.length < 32) {
+    logLoginDiag('misconfigured_session_secret')
     json(res, 500, {
       ok: false,
       code: 'misconfigured',
@@ -35,10 +50,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return
   }
 
+  if (!hashInspection.ok) {
+    logLoginDiag(
+      hashInspection.reason === 'missing'
+        ? 'misconfigured_password_hash_missing'
+        : 'misconfigured_password_hash_malformed',
+    )
+    json(res, 500, {
+      ok: false,
+      code: hashInspection.reason === 'missing' ? 'misconfigured' : 'invalid_hash_config',
+      message:
+        hashInspection.reason === 'missing'
+          ? 'Staff authentication is not configured on the server.'
+          : 'Staff password configuration is invalid. Ask an admin to re-set STAFF_PASSWORD_HASH.',
+    })
+    return
+  }
+
   let admin
   try {
     admin = getServiceClient()
   } catch {
+    logLoginDiag('misconfigured_supabase')
     json(res, 500, {
       ok: false,
       code: 'misconfigured',
@@ -48,8 +81,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   const ip = clientIp(req)
-  const limit = await assertLoginAllowed(admin, ip)
+
+  let limit
+  try {
+    limit = await assertLoginAllowed(admin, ip)
+  } catch (error) {
+    logLoginDiag('rate_limit_store_error', error instanceof Error ? error.name : 'unknown')
+    json(res, 500, {
+      ok: false,
+      code: 'server_error',
+      message: 'Could not complete sign-in right now. Try again shortly.',
+    })
+    return
+  }
+
   if (!limit.ok) {
+    logLoginDiag('rate_limited')
     res.setHeader('Retry-After', String(limit.retryAfterSeconds))
     json(res, 429, {
       ok: false,
@@ -63,20 +110,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const body = readJsonBody<{ password?: unknown }>(req)
   const password = typeof body.password === 'string' ? body.password : ''
   if (!password || password.length > 256) {
-    await recordLoginFailure(admin, ip)
+    try {
+      await recordLoginFailure(admin, ip)
+    } catch (error) {
+      logLoginDiag('rate_limit_record_error', error instanceof Error ? error.name : 'unknown')
+    }
     json(res, 401, { ok: false, code: 'invalid_password', message: 'Incorrect password.' })
     return
   }
 
-  const valid = verifyStaffPassword(password, passwordHash)
-  if (!valid) {
-    await recordLoginFailure(admin, ip)
+  const verified = verifyStaffPasswordDetailed(password, passwordHash)
+  if (!verified.ok) {
+    if (verified.reason === 'malformed' || verified.reason === 'missing') {
+      logLoginDiag('invalid_hash_config_at_verify')
+      json(res, 500, {
+        ok: false,
+        code: 'invalid_hash_config',
+        message: 'Staff password configuration is invalid. Ask an admin to re-set STAFF_PASSWORD_HASH.',
+      })
+      return
+    }
+
+    try {
+      await recordLoginFailure(admin, ip)
+    } catch (error) {
+      logLoginDiag('rate_limit_record_error', error instanceof Error ? error.name : 'unknown')
+    }
     json(res, 401, { ok: false, code: 'invalid_password', message: 'Incorrect password.' })
     return
   }
 
-  await clearLoginFailures(admin, ip)
-  const { token, payload } = createStaffSessionToken(sessionSecret)
+  try {
+    await clearLoginFailures(admin, ip)
+  } catch (error) {
+    logLoginDiag('rate_limit_clear_error', error instanceof Error ? error.name : 'unknown')
+  }
+
+  let token: string
+  let payload: { exp: number }
+  try {
+    ;({ token, payload } = createStaffSessionToken(sessionSecret))
+  } catch {
+    logLoginDiag('session_issue_failed')
+    json(res, 500, {
+      ok: false,
+      code: 'misconfigured',
+      message: 'Staff authentication is not configured on the server.',
+    })
+    return
+  }
+
   const secure = isSecureCookieRequest(req)
   json(
     res,

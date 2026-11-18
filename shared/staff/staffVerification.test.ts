@@ -106,7 +106,8 @@ describe('Canberra formatting', () => {
 describe('staff password + session', () => {
   it('verifies scrypt password hashes without exposing plaintext', () => {
     const encoded = hashStaffPassword('correct-horse-battery')
-    expect(encoded.startsWith('scrypt$')).toBe(true)
+    expect(encoded.startsWith('scrypt:')).toBe(true)
+    expect(encoded.includes('$')).toBe(false)
     expect(verifyStaffPassword('correct-horse-battery', encoded)).toBe(true)
     expect(verifyStaffPassword('wrong', encoded)).toBe(false)
   })

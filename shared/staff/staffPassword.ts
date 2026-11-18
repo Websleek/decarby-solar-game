@@ -1,12 +1,102 @@
 /**
  * Shared staff password verifier (scrypt).
- * Format: scrypt$N$r$p$saltB64$hashB64
+ *
+ * Canonical env-safe format (preferred):
+ *   scrypt:N:r:p:saltB64url:hashB64url
+ *
+ * Legacy format (accepted for verify only):
+ *   scrypt$N$r$p$saltB64url$hashB64url
+ *
+ * Prefer ':' — '$' is silently expanded by many env loaders (compose/dotenv/PaaS),
+ * which truncates letter-prefixed base64 segments and makes login always fail.
  * Never store or ship plaintext passwords in frontend env vars.
  */
 
 import { scryptSync, timingSafeEqual, randomBytes } from 'node:crypto'
 
 const PREFIX = 'scrypt'
+const CANONICAL_SEP = ':'
+const LEGACY_SEP = '$'
+
+export type StaffPasswordHashInspection =
+  | { ok: true; format: 'canonical' | 'legacy'; N: number; r: number; p: number }
+  | { ok: false; reason: 'missing' | 'malformed' }
+
+export type StaffPasswordVerifyResult =
+  | { ok: true }
+  | { ok: false; reason: 'mismatch' | 'malformed' | 'missing' }
+
+function parseEncodedHash(encoded: string): {
+  format: 'canonical' | 'legacy'
+  N: number
+  r: number
+  p: number
+  salt: Buffer
+  expected: Buffer
+} | null {
+  const trimmed = normalizeStaffPasswordHashEnv(encoded)
+  if (!trimmed) return null
+
+  let format: 'canonical' | 'legacy' | null = null
+  let parts: string[] = []
+  if (trimmed.startsWith(`${PREFIX}${CANONICAL_SEP}`)) {
+    parts = trimmed.split(CANONICAL_SEP)
+    format = 'canonical'
+  } else if (trimmed.startsWith(`${PREFIX}${LEGACY_SEP}`)) {
+    parts = trimmed.split(LEGACY_SEP)
+    format = 'legacy'
+  } else {
+    return null
+  }
+
+  if (parts.length !== 6 || parts[0] !== PREFIX || !format) return null
+  const N = Number(parts[1])
+  const r = Number(parts[2])
+  const p = Number(parts[3])
+  if (!Number.isFinite(N) || !Number.isFinite(r) || !Number.isFinite(p)) return null
+  if (N < 2 || r < 1 || p < 1) return null
+
+  let salt: Buffer
+  let expected: Buffer
+  try {
+    salt = Buffer.from(parts[4]!, 'base64url')
+    expected = Buffer.from(parts[5]!, 'base64url')
+  } catch {
+    return null
+  }
+  // Reject whitespace/junk that base64url decoders may partially accept.
+  if (!/^[A-Za-z0-9_-]+$/.test(parts[4]!) || !/^[A-Za-z0-9_-]+$/.test(parts[5]!)) {
+    return null
+  }
+  if (salt.length < 8 || expected.length < 16) return null
+
+  return { format, N, r, p, salt, expected }
+}
+
+/** Normalize a Vercel/env paste: trim, first line only, strip wrapping quotes. */
+export function normalizeStaffPasswordHashEnv(raw: string | undefined | null): string {
+  if (typeof raw !== 'string') return ''
+  let value = raw.trim()
+  if (!value) return ''
+  value = value.split(/\r?\n/, 1)[0]!.trim()
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    value = value.slice(1, -1).trim()
+  }
+  return value
+}
+
+export function inspectStaffPasswordHash(
+  encoded: string | undefined | null,
+): StaffPasswordHashInspection {
+  const normalized = normalizeStaffPasswordHashEnv(encoded)
+  if (!normalized) return { ok: false, reason: 'missing' }
+  const parsed = parseEncodedHash(normalized)
+  if (!parsed) return { ok: false, reason: 'malformed' }
+  return { ok: true, format: parsed.format, N: parsed.N, r: parsed.r, p: parsed.p }
+}
 
 export function hashStaffPassword(
   password: string,
@@ -24,29 +114,35 @@ export function hashStaffPassword(
     String(p),
     salt.toString('base64url'),
     hash.toString('base64url'),
-  ].join('$')
+  ].join(CANONICAL_SEP)
+}
+
+export function verifyStaffPasswordDetailed(
+  password: string,
+  encoded: string | undefined | null,
+): StaffPasswordVerifyResult {
+  const inspection = inspectStaffPasswordHash(encoded)
+  if (!inspection.ok) return { ok: false, reason: inspection.reason }
+
+  const parsed = parseEncodedHash(normalizeStaffPasswordHashEnv(encoded))
+  if (!parsed) return { ok: false, reason: 'malformed' }
+
+  try {
+    const actual = scryptSync(password, parsed.salt, parsed.expected.length, {
+      N: parsed.N,
+      r: parsed.r,
+      p: parsed.p,
+      maxmem: 64 * 1024 * 1024,
+    })
+    if (actual.length !== parsed.expected.length) return { ok: false, reason: 'mismatch' }
+    if (!timingSafeEqual(actual, parsed.expected)) return { ok: false, reason: 'mismatch' }
+    return { ok: true }
+  } catch {
+    // Treat crypto failures as configuration problems, not wrong passwords.
+    return { ok: false, reason: 'malformed' }
+  }
 }
 
 export function verifyStaffPassword(password: string, encoded: string): boolean {
-  try {
-    const parts = encoded.split('$')
-    if (parts.length !== 6 || parts[0] !== PREFIX) return false
-    const N = Number(parts[1])
-    const r = Number(parts[2])
-    const p = Number(parts[3])
-    const salt = Buffer.from(parts[4]!, 'base64url')
-    const expected = Buffer.from(parts[5]!, 'base64url')
-    if (!Number.isFinite(N) || !Number.isFinite(r) || !Number.isFinite(p)) return false
-    if (salt.length < 8 || expected.length < 16) return false
-    const actual = scryptSync(password, salt, expected.length, {
-      N,
-      r,
-      p,
-      maxmem: 64 * 1024 * 1024,
-    })
-    if (actual.length !== expected.length) return false
-    return timingSafeEqual(actual, expected)
-  } catch {
-    return false
-  }
+  return verifyStaffPasswordDetailed(password, encoded).ok
 }

@@ -1,3 +1,5 @@
+import { normalizeStaffPasswordHashEnv } from '../../shared/staff/staffPassword'
+
 export function requireEnv(name: string): string {
   const value = process.env[name]
   if (!value || !value.trim()) {
@@ -18,15 +20,18 @@ export function supabaseServiceRoleKey(): string {
   return process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || ''
 }
 
+/** Reads STAFF_PASSWORD_HASH only — never a VITE_ public var. */
 export function staffPasswordHash(): string {
-  return process.env.STAFF_PASSWORD_HASH?.trim() || ''
+  return normalizeStaffPasswordHashEnv(process.env.STAFF_PASSWORD_HASH)
 }
 
 export function staffSessionSecret(): string {
   return process.env.STAFF_SESSION_SECRET?.trim() || ''
 }
 
-export function isSecureCookieRequest(req: { headers: { host?: string; 'x-forwarded-proto'?: string } }): boolean {
+export function isSecureCookieRequest(req: {
+  headers: { host?: string; 'x-forwarded-proto'?: string }
+}): boolean {
   const proto = req.headers['x-forwarded-proto']
   if (proto) return proto.split(',')[0]?.trim() === 'https'
   const host = req.headers.host ?? ''
