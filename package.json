@@ -12,7 +12,9 @@
     "test:staging:audit": "node scripts/staging/audit-migration-deps.mjs",
     "test:staging:security": "node scripts/staging/integration-security.mjs",
     "staging:cli-runbook": "node scripts/staging/cli-runbook.mjs",
-    "final-c:deploy-runbook": "node scripts/final-c-deploy-runbook.mjs"
+    "final-c:deploy-runbook": "node scripts/final-c-deploy-runbook.mjs",
+    "staff:hash-password": "node scripts/hash-staff-password.mjs",
+    "staff:verification-runbook": "node scripts/staff-voucher-verification-runbook.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
@@ -27,6 +29,7 @@
     "@types/node": "^24.10.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
+    "@vercel/node": "^5.10.2",
     "@vitejs/plugin-react": "^5.1.0",
     "jsdom": "^27.0.1",
     "supabase": "^3.0.0",
