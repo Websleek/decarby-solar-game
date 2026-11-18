@@ -75,6 +75,7 @@ describe('Final C readiness contracts', () => {
     expect(migrations).toContain('20260327000000_final_b_voucher_claims.sql')
     expect(migrations).toContain('20260328000000_final_c_snapshot_atomicity.sql')
     expect(migrations).toContain('20260329000000_event_three_rooftop_v1.sql')
+    expect(migrations).toContain('20260329200000_reward_decision_reconcile.sql')
 
     const finalB = readFileSync(
       resolve(root, 'supabase/migrations/20260327000000_final_b_voucher_claims.sql'),

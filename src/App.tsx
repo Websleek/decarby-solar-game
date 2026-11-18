@@ -31,6 +31,7 @@ import { readCachedClaimResult } from './services/claimResultCache'
 import {
   isCampaignLevelLocked,
   nextIncompleteCampaignLevelId,
+  resolveAttemptCampaignRunId,
   readPromoRunDraft,
   writePromoRunDraft,
 } from './services/promoRunCache'
@@ -54,7 +55,6 @@ import {
 } from './backend/services/competitiveAttempts'
 import { isBackendConfigured } from './backend/config'
 import { profileService } from './backend/services/profile'
-import { operatorClaimsService } from './backend/services/operatorClaims'
 import { promotionalCampaignService } from './backend/services/promotionalCampaign'
 import type { CampaignLevelId } from '../shared/achievements/registry'
 import type { PromotionalCampaignRun } from '../shared/campaign/types'
@@ -111,18 +111,19 @@ export default function App() {
     if (promoRun && promoFlowActive) writePromoRunDraft(promoRun)
   }, [promoRun, promoFlowActive])
 
+  // Staff tools: open only via #operator-claims. Do not probe operator-claims
+  // on every public session — OperatorClaimsScreen still enforces authorization.
   useEffect(() => {
-    if (!isBackendConfigured()) {
-      setShowOperatorClaims(false)
-      return
+    const syncOperatorHash = () => {
+      if (typeof window === 'undefined') return
+      if (window.location.hash.replace(/^#/, '') === 'operator-claims') {
+        setShowOperatorClaims(true)
+        setScreen('operatorClaims')
+      }
     }
-    let cancelled = false
-    void operatorClaimsService.checkAccess().then((ok) => {
-      if (!cancelled) setShowOperatorClaims(ok)
-    })
-    return () => {
-      cancelled = true
-    }
+    syncOperatorHash()
+    window.addEventListener('hashchange', syncOperatorHash)
+    return () => window.removeEventListener('hashchange', syncOperatorHash)
   }, [])
 
   const soundEnabled = progress?.soundEnabled ?? true
@@ -259,12 +260,14 @@ export default function App() {
       setActiveLevelId(levelId)
       setOnlineSubmission({ status: 'idle' })
 
-      const runId = options?.campaignRunId ?? (promoFlowActive ? promoRun?.id : null)
-      const session = await maybeStartOnlineAttempt(
-        levelId,
-        mode,
-        promoFlowActive && promoRun?.serverBacked ? runId : null,
-      )
+      // Explicit options.campaignRunId must win: beginPromotionalCampaign calls
+      // startLevel before setPromoFlowActive/setPromoRun have re-rendered.
+      const runId = resolveAttemptCampaignRunId({
+        explicitCampaignRunId: options?.campaignRunId,
+        promoFlowActive,
+        serverBackedRunId: promoRun?.serverBacked ? promoRun.id : null,
+      })
+      const session = await maybeStartOnlineAttempt(levelId, mode, runId)
       setOnlineSession(session)
       setEngine(createPuzzleEngine(level, { recordActions: session !== null }))
       setEngineKey((k) => k + 1)

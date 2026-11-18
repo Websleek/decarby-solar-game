@@ -53,3 +53,24 @@ export function isCampaignLevelLocked(
   if (!slot) return true
   return slot.status === 'local_complete' || slot.status === 'verified'
 }
+
+/**
+ * Resolve which campaign run id (if any) should attach to a competitive attempt.
+ *
+ * Explicit `campaignRunId` from the caller wins — including `null` for offline —
+ * so the first rooftop after `beginPromotionalCampaign` is not dropped while
+ * React state (`promoFlowActive` / `promoRun`) is still stale from setState.
+ */
+export function resolveAttemptCampaignRunId(input: {
+  explicitCampaignRunId?: string | null
+  promoFlowActive: boolean
+  serverBackedRunId?: string | null
+}): string | null {
+  if (input.explicitCampaignRunId !== undefined) {
+    return input.explicitCampaignRunId
+  }
+  if (input.promoFlowActive && input.serverBackedRunId) {
+    return input.serverBackedRunId
+  }
+  return null
+}

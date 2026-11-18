@@ -4,6 +4,7 @@ import { createLocalCampaignRun, applyLocalLevelComplete } from '../../shared/ca
 import {
   isCampaignLevelLocked,
   nextIncompleteCampaignLevelId,
+  resolveAttemptCampaignRunId,
 } from './promoRunCache'
 import { shouldConfirmResetBeforeFinish } from './playerSessionReset'
 
@@ -52,6 +53,48 @@ describe('event campaign flow guards', () => {
     expect(
       shouldConfirmResetBeforeFinish({ promoFlowActive: true, claimCompleted: true }),
     ).toBe(false)
+  })
+
+  it('keeps explicit campaignRunId for the first rooftop while promo React state is still stale', () => {
+    expect(
+      resolveAttemptCampaignRunId({
+        explicitCampaignRunId: '4ea53087-24b5-4dfc-a9a2-877db8e5af3c',
+        promoFlowActive: false,
+        serverBackedRunId: null,
+      }),
+    ).toBe('4ea53087-24b5-4dfc-a9a2-877db8e5af3c')
+
+    expect(
+      resolveAttemptCampaignRunId({
+        explicitCampaignRunId: null,
+        promoFlowActive: false,
+        serverBackedRunId: null,
+      }),
+    ).toBeNull()
+
+    expect(
+      resolveAttemptCampaignRunId({
+        promoFlowActive: true,
+        serverBackedRunId: 'server-run',
+      }),
+    ).toBe('server-run')
+
+    expect(
+      resolveAttemptCampaignRunId({
+        promoFlowActive: false,
+        serverBackedRunId: 'server-run',
+      }),
+    ).toBeNull()
+  })
+})
+
+describe('public event does not probe staff operator access on boot', () => {
+  it('App source no longer mounts operatorClaimsService.checkAccess for every visitor', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const appSource = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8')
+    expect(appSource).not.toContain('operatorClaimsService.checkAccess')
+    expect(appSource).toContain("=== 'operator-claims'")
   })
 })
 

@@ -1,4 +1,8 @@
 import { loadActiveProfile, requireAuthenticatedUser } from '../_shared/auth.ts'
+import {
+  evaluateVerifiedLevelRows,
+  needsRewardDecisionReconcile,
+} from '../_shared/campaign/rewardDecisionReconcile.ts'
 import { corsHeaders, jsonResponse, publicError } from '../_shared/cors.ts'
 import { clientKey, takeRateToken } from '../_shared/rateLimit.ts'
 import { validateVoucherContactForm } from '../_shared/rewards/contactValidation.ts'
@@ -84,11 +88,65 @@ Deno.serve(async (req) => {
       return publicError(400, validated.code, validated.reason)
     }
 
-    const { data: decision } = await auth.admin
+    let { data: decision } = await auth.admin
       .from('promotional_campaign_reward_decisions')
-      .select('id, eligible, amount_cents, tier_id, player_id, total_stars')
+      .select('id, eligible, amount_cents, tier_id, player_id, total_stars, voucher_issued, decision')
       .eq('run_id', runId)
       .maybeSingle()
+
+    // Repair stale ineligible decisions for completed verified event runs (e.g. 5/9 → A$50)
+    // without trusting client-submitted amounts.
+    if (!decision?.eligible || !decision.tier_id || Number(decision.amount_cents) <= 0) {
+      const { data: levels } = await auth.admin
+        .from('promotional_campaign_run_levels')
+        .select(
+          'status, level_id, verified_stars, verified_score, verified_record_id, level_version',
+        )
+        .eq('run_id', runId)
+      const fresh = evaluateVerifiedLevelRows(levels ?? [])
+      const { data: existingClaim } = await auth.admin
+        .from('promotional_voucher_claims')
+        .select('id')
+        .eq('run_id', runId)
+        .maybeSingle()
+
+      if (needsRewardDecisionReconcile(decision, fresh, existingClaim != null) && fresh.eligible) {
+        const { data: reconciled, error: reconcileError } = await auth.admin.rpc(
+          'reconcile_campaign_reward_decision',
+          {
+            p_run_id: runId,
+            p_player_id: profile.id,
+            p_eligible: true,
+            p_tier_id: fresh.tierId,
+            p_amount_cents: fresh.amountCents,
+            p_total_stars: fresh.totalStars,
+            p_total_score: fresh.totalScore,
+            p_decision: fresh,
+          },
+        )
+        if (reconcileError) {
+          console.error('claim reconcile failed', reconcileError.message)
+          return publicError(
+            500,
+            'server_error',
+            'Could not reconcile reward decision. Apply reward-decision reconcile migration.',
+          )
+        }
+        const payload = (reconciled ?? {}) as Record<string, unknown>
+        if (payload.ok === true && payload.eligible === true) {
+          decision = {
+            id: String(payload.decisionId ?? decision?.id ?? ''),
+            eligible: true,
+            amount_cents: Number(payload.amountCents ?? 0),
+            tier_id: typeof payload.tierId === 'string' ? payload.tierId : null,
+            player_id: profile.id,
+            total_stars: Number(payload.totalStars ?? 0),
+            voucher_issued: false,
+            decision: payload.decision,
+          }
+        }
+      }
+    }
 
     if (!decision) {
       return publicError(
