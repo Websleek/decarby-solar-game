@@ -5,7 +5,7 @@ import {
   readCookie,
   verifyStaffSessionToken,
   type StaffSessionPayload,
-} from '../../shared/staff/staffSession'
+} from './session'
 import { isSecureCookieRequest, staffSessionSecret } from './env'
 
 export function json(
@@ -31,12 +31,15 @@ export function clientIp(req: VercelRequest): string {
   if (Array.isArray(forwarded) && forwarded[0]) {
     return String(forwarded[0]).split(',')[0]!.trim().slice(0, 128)
   }
-  return (req.socket?.remoteAddress ?? 'unknown').slice(0, 128)
+  const remote = req.socket?.remoteAddress
+  return (remote ?? 'unknown').slice(0, 128)
 }
 
 export function requireStaffSession(
   req: VercelRequest,
-): { ok: true; session: StaffSessionPayload } | { ok: false; status: number; code: string; message: string } {
+):
+  | { ok: true; session: StaffSessionPayload }
+  | { ok: false; status: number; code: string; message: string } {
   const secret = staffSessionSecret()
   if (!secret || secret.length < 32) {
     return {

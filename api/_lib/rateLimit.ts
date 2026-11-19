@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash } from 'crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const LOGIN_WINDOW_MS = 15 * 60 * 1000

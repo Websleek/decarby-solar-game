@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { withStaffApiHandler } from '../_lib/handler'
 import { expiredSessionClearHeader, json, requireStaffSession } from '../_lib/http'
 
-export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+async function sessionHandler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'GET') {
     json(res, 405, { ok: false, code: 'method_not_allowed', message: 'GET only.' })
     return
@@ -22,3 +23,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     expiresAt: new Date(auth.session.exp * 1000).toISOString(),
   })
 }
+
+export default withStaffApiHandler('session', sessionHandler)

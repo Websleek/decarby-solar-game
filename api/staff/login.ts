@@ -2,17 +2,18 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import {
   inspectStaffPasswordHash,
   verifyStaffPasswordDetailed,
-} from '../../shared/staff/staffPassword'
+} from '../_lib/password'
 import {
   STAFF_SESSION_TTL_SECONDS,
   createStaffSessionToken,
   staffSessionCookieHeader,
-} from '../../shared/staff/staffSession'
+} from '../_lib/session'
 import {
   isSecureCookieRequest,
   staffPasswordHash,
   staffSessionSecret,
 } from '../_lib/env'
+import { withStaffApiHandler } from '../_lib/handler'
 import { clientIp, json, readJsonBody } from '../_lib/http'
 import {
   assertLoginAllowed,
@@ -22,7 +23,6 @@ import {
 import { getServiceClient } from '../_lib/supabaseAdmin'
 
 function logLoginDiag(category: string, detail?: string): void {
-  // Never log passwords, hashes, or secrets — categories only.
   if (detail) {
     console.error(`staff_login:${category}`, detail)
     return
@@ -30,7 +30,7 @@ function logLoginDiag(category: string, detail?: string): void {
   console.error(`staff_login:${category}`)
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+async function loginHandler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
     json(res, 405, { ok: false, code: 'method_not_allowed', message: 'POST only.' })
     return
@@ -126,7 +126,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       json(res, 500, {
         ok: false,
         code: 'invalid_hash_config',
-        message: 'Staff password configuration is invalid. Ask an admin to re-set STAFF_PASSWORD_HASH.',
+        message:
+          'Staff password configuration is invalid. Ask an admin to re-set STAFF_PASSWORD_HASH.',
       })
       return
     }
@@ -177,3 +178,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     },
   )
 }
+
+export default withStaffApiHandler('login', loginHandler)

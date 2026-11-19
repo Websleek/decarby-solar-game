@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { normalizeVoucherCode } from '../../shared/staff/normalizeVoucherCode'
+import { withStaffApiHandler } from '../_lib/handler'
 import {
   expiredSessionClearHeader,
   json,
@@ -7,9 +7,10 @@ import {
   requireStaffSession,
 } from '../_lib/http'
 import { getServiceClient } from '../_lib/supabaseAdmin'
+import { normalizeVoucherCode } from '../_lib/voucherCode'
 import { mapVoucherRow, withUiStatus } from '../_lib/voucherMap'
 
-export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+async function lookupHandler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
     json(res, 405, { ok: false, code: 'method_not_allowed', message: 'POST only.' })
     return
@@ -83,3 +84,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     voucher: withUiStatus(voucher),
   })
 }
+
+export default withStaffApiHandler('lookup', lookupHandler)

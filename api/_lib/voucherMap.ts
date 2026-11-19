@@ -1,5 +1,5 @@
-import type { StaffVoucherView } from '../../shared/staff/redeemEligibility'
-import { deriveDisplayStatus } from '../../shared/staff/redeemEligibility'
+import type { StaffVoucherView } from './redeemEligibility'
+import { deriveDisplayStatus } from './redeemEligibility'
 
 export function mapVoucherRow(raw: Record<string, unknown> | null | undefined): StaffVoucherView | null {
   if (!raw || typeof raw !== 'object') return null
@@ -28,7 +28,6 @@ export function withUiStatus(voucher: StaffVoucherView): StaffVoucherView & {
   canRedeem: boolean
 } {
   const displayStatus = deriveDisplayStatus(voucher)
-  // UI offer flag — still gated by server redeem RPC (live issuance + flags).
   const canRedeem =
     displayStatus === 'valid' && voucher.redeemable === true && voucher.demo === false
   return { ...voucher, displayStatus, canRedeem }
