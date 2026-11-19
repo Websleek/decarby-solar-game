@@ -3,9 +3,14 @@ import {
   validateVoucherContactForm,
   type ValidatedVoucherContact,
 } from '../../../shared/rewards/contactValidation'
+import {
+  customerMessageForClaimError,
+  parseClaimErrorPayload,
+} from '../../../shared/rewards/claimErrorMessages'
 import type { ClaimCampaignVoucherResult } from '../../../shared/rewards/voucherClaim'
-import { BackendError, toBackendError } from '../errors'
+import { BackendError } from '../errors'
 import { isBackendConfigured } from '../config'
+import { parseFunctionsInvokeError } from '../parseFunctionsInvokeError'
 import { getSupabaseClient } from '../supabaseClient'
 import { identityService } from './identity'
 
@@ -64,7 +69,19 @@ export const voucherClaimService = {
 
     const local = validateVoucherClaimFormLocal(input.form)
     if (!local.ok) {
-      return { ok: false, code: 'invalid_contact', message: local.reason }
+      const code =
+        local.field === 'email'
+          ? 'invalid_email'
+          : local.field === 'adult'
+            ? 'adult_attestation_required'
+            : local.field === 'terms'
+              ? 'terms_required'
+              : 'invalid_contact'
+      return {
+        ok: false,
+        code,
+        message: customerMessageForClaimError(code, local.reason),
+      }
     }
 
     const client = getSupabaseClient()
@@ -81,23 +98,32 @@ export const voucherClaimService = {
       throw new BackendError('unauthenticated', 'Sign in anonymously to continue.')
     }
 
-    const { data, error } = await client.functions.invoke('claim-campaign-voucher', {
-      body: {
-        runId: input.runId,
-        fullName: local.value.fullName,
-        phone: local.value.phone,
-        email: local.value.emailRaw,
-        termsAccepted: true,
-        adultSelfAttested: local.value.adultSelfAttested,
-        marketingOptIn: local.value.marketingOptIn,
-        termsVersion: local.value.termsVersion,
-        // Intentionally omitted: amountCents — server decision is authoritative.
-      },
-    })
+    let data: unknown
+    let error: unknown
+    try {
+      const invoked = await client.functions.invoke('claim-campaign-voucher', {
+        body: {
+          runId: input.runId,
+          fullName: local.value.fullName,
+          phone: local.value.phone,
+          email: local.value.emailRaw,
+          termsAccepted: true,
+          adultSelfAttested: local.value.adultSelfAttested,
+          marketingOptIn: local.value.marketingOptIn,
+          termsVersion: local.value.termsVersion,
+          // Intentionally omitted: amountCents — server decision is authoritative.
+        },
+      })
+      data = invoked.data
+      error = invoked.error
+    } catch (thrown) {
+      const parsed = await parseFunctionsInvokeError(thrown)
+      return { ok: false, code: parsed.code, message: parsed.message }
+    }
 
     if (error) {
-      const mapped = toBackendError(error, 'Voucher claim failed.')
-      return { ok: false, code: mapped.code, message: mapped.message }
+      const parsed = await parseFunctionsInvokeError(error, data)
+      return { ok: false, code: parsed.code, message: parsed.message }
     }
 
     const payload = (data ?? {}) as Record<string, unknown>
@@ -131,13 +157,15 @@ export const voucherClaimService = {
       }
     }
 
+    const structured = parseClaimErrorPayload(payload)
+    if (structured) {
+      return { ok: false, code: structured.code, message: structured.message }
+    }
+
     return {
       ok: false,
-      code: typeof payload.code === 'string' ? payload.code : 'claim_failed',
-      message:
-        typeof payload.message === 'string'
-          ? payload.message
-          : 'Could not process your voucher request.',
+      code: 'claim_failed',
+      message: customerMessageForClaimError('claim_failed'),
     }
   },
 }

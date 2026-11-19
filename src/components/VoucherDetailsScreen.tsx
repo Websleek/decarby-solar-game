@@ -128,8 +128,17 @@ export function VoucherDetailsScreen({
       } else {
         setError(response.message)
       }
-    } catch {
-      setError('Something went wrong while preparing your voucher. Please try again.')
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : 'Something went wrong while preparing your voucher. Please try again.'
+      // BackendError / network failures — never show raw FunctionsHttpError text.
+      setError(
+        /non-2xx|FunctionsHttpError/i.test(message)
+          ? 'Could not process your voucher request. Please try again.'
+          : message,
+      )
     } finally {
       submittingRef.current = false
       setBusy(false)
