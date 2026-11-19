@@ -3,6 +3,8 @@
  * Server SQL remains authoritative; this never enables live offers.
  */
 
+import { isPastVoucherExpiry } from '../rewards/voucherExpiry.ts'
+
 export type StaffVoucherView = Readonly<{
   code: string
   amountCents: number
@@ -10,7 +12,8 @@ export type StaffVoucherView = Readonly<{
   campaignId: string
   rewardTierId: string
   issuedAt: string
-  expiresAt: string
+  /** ISO timestamp, or null when the voucher does not expire. */
+  expiresAt: string | null
   status: string
   demo: boolean
   redeemable: boolean
@@ -38,8 +41,7 @@ export function deriveDisplayStatus(
   if (voucher.status === 'redeemed') return 'redeemed'
   if (voucher.status === 'void') return 'void'
   if (voucher.status === 'expired') return 'expired'
-  const expires = Date.parse(voucher.expiresAt)
-  if (!Number.isNaN(expires) && expires <= nowMs) return 'expired'
+  if (isPastVoucherExpiry(voucher.expiresAt, nowMs)) return 'expired'
   if (voucher.demo || !voucher.redeemable) return 'not_redeemable'
   if (voucher.status === 'issued') return 'valid'
   return 'invalid'

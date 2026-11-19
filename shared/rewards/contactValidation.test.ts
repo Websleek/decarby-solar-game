@@ -57,7 +57,7 @@ describe('contact validation', () => {
     if (form.ok) expect(form.value.phone).toBe('')
   })
 
-  it('requires promotional terms and records adult attestation honestly', () => {
+  it('requires promotional terms and adult self-attestation', () => {
     const missing = validateVoucherContactForm({
       fullName: 'Jane Citizen',
       phone: '0412345678',
@@ -77,9 +77,9 @@ describe('contact validation', () => {
       adultSelfAttested: false,
       termsVersion: PROMOTIONAL_TERMS_VERSION,
     })
-    expect(withoutAdultCheckbox.ok).toBe(true)
-    if (withoutAdultCheckbox.ok) {
-      expect(withoutAdultCheckbox.value.adultSelfAttested).toBe(false)
+    expect(withoutAdultCheckbox.ok).toBe(false)
+    if (!withoutAdultCheckbox.ok) {
+      expect(withoutAdultCheckbox.code).toBe('adult_attestation_required')
     }
 
     const ok = validateVoucherContactForm({
@@ -92,7 +92,10 @@ describe('contact validation', () => {
       termsVersion: PROMOTIONAL_TERMS_VERSION,
     })
     expect(ok.ok).toBe(true)
-    if (ok.ok) expect(ok.value.marketingOptIn).toBe(false)
+    if (ok.ok) {
+      expect(ok.value.marketingOptIn).toBe(false)
+      expect(ok.value.adultSelfAttested).toBe(true)
+    }
   })
 
   it('ignores client amount fields for form validity', () => {
@@ -159,6 +162,26 @@ describe('voucher codes and email template', () => {
     })
     expect(content.subject.toLowerCase()).toMatch(/demo|test/)
     expect(content.text).toMatch(/not redeemable/i)
+    expect(content.text).not.toMatch(/promo-terms-v1/)
+  })
+
+  it('builds live email with No expiry and no internal terms id', () => {
+    const content = buildVoucherEmail({
+      fullName: 'Alex',
+      amountCents: 5000,
+      voucherCode: 'DSR-AAAA-BBBB-CCCC',
+      expiresAtIso: null,
+      demo: false,
+      redeemable: true,
+      termsVersion: PROMOTIONAL_TERMS_VERSION,
+    })
+    expect(content.subject).toMatch(/A\$50 OFF/)
+    expect(content.subject.toLowerCase()).not.toMatch(/demo|test/)
+    expect(content.text).toMatch(/No expiry/)
+    expect(content.html).toMatch(/No expiry/)
+    expect(content.text).not.toMatch(/promo-terms-v1/)
+    expect(content.html).not.toMatch(/promo-terms-v1/)
+    expect(content.text).toMatch(/Present this code to Decarby Solar/)
   })
 })
 

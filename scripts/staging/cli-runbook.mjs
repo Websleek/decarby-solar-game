@@ -7,7 +7,10 @@
  */
 const args = process.argv.slice(2)
 const refArg = args.find((a) => a.startsWith('--ref='))
-const STAGING_REF = refArg ? refArg.slice('--ref='.length) : process.env.STAGING_PROJECT_REF || 'YOUR_STAGING_PROJECT_REF'
+const STAGING_REF =
+  refArg?.slice('--ref='.length) ||
+  process.env.STAGING_PROJECT_REF ||
+  'ixsejdbiyfrhtxxfagls'
 const PROD_REF = 'lrohmaodpqbmvgxsspql'
 
 if (STAGING_REF === PROD_REF) {

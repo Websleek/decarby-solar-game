@@ -15,7 +15,9 @@
     "final-c:deploy-runbook": "node scripts/final-c-deploy-runbook.mjs",
     "staff:hash-password": "node scripts/hash-staff-password.mjs",
     "staff:verification-runbook": "node scripts/staff-voucher-verification-runbook.mjs",
-    "staff:smoke-login": "node scripts/smoke-staff-login-bundle.mjs"
+    "staff:smoke-login": "node scripts/smoke-staff-login-bundle.mjs",
+    "staff:redeem-integration": "node scripts/staging/run-staff-redeem-integration.mjs",
+    "staff:redeem-setup-runbook": "node scripts/staging/staff-redeem-setup-runbook.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",

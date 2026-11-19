@@ -204,7 +204,10 @@ Deno.serve(async (req) => {
     const emailJobId = String(result.emailJobId ?? '')
     const code = String(result.code ?? '')
     const amountCents = Number(result.amountCents ?? 0)
-    const expiresAt = String(result.expiresAt ?? '')
+    const expiresAt =
+      result.expiresAt == null || result.expiresAt === ''
+        ? null
+        : String(result.expiresAt)
     const demo = result.demo === true
     const redeemable = result.redeemable === true
     const idempotent = result.idempotent === true

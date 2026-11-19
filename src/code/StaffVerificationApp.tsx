@@ -28,10 +28,15 @@ function statusLabel(status: string): string {
     case 'void':
       return 'Cancelled'
     case 'not_redeemable':
-      return 'Not redeemable'
+      return 'Demo'
     default:
       return 'Invalid'
   }
+}
+
+function expiryLabel(expiresAt: string | null | undefined): string {
+  if (expiresAt == null || String(expiresAt).trim() === '') return 'No expiry'
+  return formatCanberraDateTime(expiresAt)
 }
 
 export function StaffVerificationApp() {
@@ -252,7 +257,7 @@ export function StaffVerificationApp() {
               </div>
               <div>
                 <dt>Expires</dt>
-                <dd>{formatCanberraDateTime(voucher.expiresAt)}</dd>
+                <dd>{expiryLabel(voucher.expiresAt)}</dd>
               </div>
             </dl>
 
@@ -261,11 +266,17 @@ export function StaffVerificationApp() {
             )}
             {voucher.displayStatus === 'not_redeemable' && (
               <p className="staff-result__note">
-                This code is demo or non-live and cannot be redeemed.
+                This is a demo code and cannot be redeemed.
               </p>
+            )}
+            {voucher.displayStatus === 'void' && (
+              <p className="staff-result__note">This voucher has been cancelled.</p>
             )}
             {voucher.displayStatus === 'expired' && (
               <p className="staff-result__note">This voucher has expired.</p>
+            )}
+            {voucher.displayStatus === 'invalid' && (
+              <p className="staff-result__note">This voucher is not valid for redemption.</p>
             )}
 
             {redeemMessage && <p className="staff-result__note">{redeemMessage}</p>}

@@ -1,17 +1,22 @@
 /**
  * Branded transactional voucher email (HTML + text).
  * Demo/test messages never promise a redeemable live discount.
+ * Genuine emails never show internal terms version ids or invented expiry dates.
  */
 
 import { MAX_CAMPAIGN_STARS } from '../campaign/rewardTiers.ts'
+import { resolvePromotionalTerms } from './promotionalTerms.ts'
+import { formatVoucherExpiryLabel, hasVoucherExpiry } from './voucherExpiry.ts'
 
 export type VoucherEmailTemplateInput = Readonly<{
   fullName: string
   amountCents: number
   voucherCode: string
-  expiresAtIso: string
+  /** ISO timestamp, or null/empty for non-expiring vouchers. */
+  expiresAtIso: string | null
   demo: boolean
   redeemable: boolean
+  /** Internal audit version — used only to resolve customer-facing copy, never printed raw. */
   termsVersion: string
   totalStars?: number
   contactEmail?: string
@@ -37,30 +42,59 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;')
 }
 
-function formatExpiry(iso: string, redeemable: boolean, demo: boolean): string | null {
-  if (demo || !redeemable) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  return d.toLocaleDateString('en-AU', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+function customerTermsBlock(termsVersion: string, isDemo: boolean): {
+  text: string
+  html: string
+} {
+  if (isDemo) {
+    return {
+      text: 'No approved live promotional offer is activated by this test message.',
+      html: 'No approved live promotional offer is activated by this test message.',
+    }
+  }
+  const terms = resolvePromotionalTerms(termsVersion)
+  const label = terms?.customerLabel ?? 'Decarby Solar Roof Challenge Promotional Terms'
+  const summary =
+    terms?.emailTermsSummary ??
+    'Present this code to Decarby Solar for verification. Offer subject to promotional terms. Not transferable for cash.'
+  const url =
+    terms?.publishedForCustomers === true &&
+    typeof terms.publicUrl === 'string' &&
+    /^https:\/\//i.test(terms.publicUrl)
+      ? terms.publicUrl
+      : null
+
+  const text = url
+    ? `${summary}\nTerms: ${label}\n${url}`
+    : `${summary}\nTerms: ${label}`
+  const html = url
+    ? `${escapeHtml(summary)} <a href="${escapeHtml(url)}" style="color:#6E3CE2;">${escapeHtml(label)}</a>`
+    : `${escapeHtml(summary)} (${escapeHtml(label)})`
+  return { text, html }
 }
 
 export function buildVoucherEmail(input: VoucherEmailTemplateInput): VoucherEmailContent {
   const amount = formatAud(input.amountCents)
   const safeName = escapeHtml(input.fullName.trim())
   const safeCode = escapeHtml(input.voucherCode)
-  const safeTerms = escapeHtml(input.termsVersion)
   const contactEmail = escapeHtml(input.contactEmail ?? 'hello@decarbysolar.com.au')
   const contactPhone = escapeHtml(input.contactPhone ?? 'Contact Decarby Solar via decarbysolar.com.au')
   const stars =
     typeof input.totalStars === 'number' && Number.isFinite(input.totalStars)
       ? Math.max(0, Math.min(MAX_CAMPAIGN_STARS, Math.floor(input.totalStars)))
       : null
-  const expires = formatExpiry(input.expiresAtIso, input.redeemable, input.demo)
   const isDemo = input.demo || !input.redeemable
+  const expiryLabel = formatVoucherExpiryLabel(input.expiresAtIso, {
+    demo: input.demo,
+    redeemable: input.redeemable,
+  })
+  // Never show a fabricated date; live non-expiring always "No expiry".
+  const expiryDisplay =
+    isDemo && !hasVoucherExpiry(input.expiresAtIso)
+      ? 'Not applicable — demo codes are not redeemable'
+      : !isDemo && !hasVoucherExpiry(input.expiresAtIso)
+        ? 'No expiry'
+        : expiryLabel
 
   const demoBanner = isDemo
     ? 'TEST / DEMO / NOT REDEEMABLE — This message validates email delivery only. No promotional discount has been issued and this code cannot be redeemed.'
@@ -70,31 +104,34 @@ export function buildVoucherEmail(input: VoucherEmailTemplateInput): VoucherEmai
     ? `[TEST / DEMO] Decarby Solar Roof Challenge — non-redeemable voucher (${amount})`
     : `Your Decarby Solar Roof Challenge voucher — ${amount} OFF`
 
-  const congrats = isDemo
+  const plainName = input.fullName.trim()
+  const congratsHtml = isDemo
     ? `Thanks ${safeName} — your test voucher request was processed.`
     : `Congratulations ${safeName}! Your promotional voucher is ready.`
+  const congratsText = isDemo
+    ? `Thanks ${plainName} — your test voucher request was processed.`
+    : `Congratulations ${plainName}! Your promotional voucher is ready.`
+
+  const terms = customerTermsBlock(input.termsVersion, isDemo)
 
   const textLines = [
     'Decarby Solar Roof Challenge',
     '',
-    congrats,
+    congratsText,
     demoBanner ?? '',
     '',
     'You completed the three-rooftop Solar Roof Challenge.',
     stars != null ? `Verified total stars: ${stars} / ${MAX_CAMPAIGN_STARS}` : '',
-    `Awarded discount amount: ${amount}`,
+    `Awarded discount amount: ${amount} OFF`,
     `Voucher code: ${input.voucherCode}`,
-    expires ? `Expires: ${expires}` : isDemo ? 'Expiry: not applicable (non-redeemable demo code)' : '',
+    `Expiry: ${expiryDisplay}`,
     '',
-    isDemo ? 'Redemption:' : 'Redemption instructions:',
+    isDemo ? 'Redemption:' : 'How to use your voucher:',
     isDemo
       ? 'This code is not redeemable. Do not present it as a live Decarby discount.'
-      : 'Present this code when arranging an eligible Decarby Solar installation quotation. Staff will verify validity, expiry and approved terms.',
+      : 'Present this code to Decarby Solar for verification. Staff will confirm the code and discount amount.',
     '',
-    `Terms reference: ${input.termsVersion}`,
-    isDemo
-      ? 'No approved live promotional terms are activated by this test message.'
-      : 'Offer subject to eligibility, availability and Decarby approval. Not transferable for cash.',
+    terms.text,
     '',
     `Contact: ${input.contactEmail ?? 'hello@decarbysolar.com.au'} | ${input.contactPhone ?? 'decarbysolar.com.au'}`,
     '',
@@ -118,7 +155,7 @@ export function buildVoucherEmail(input: VoucherEmailTemplateInput): VoucherEmai
               ? `<p style="background:#F1EBFD;border:1px solid #E5E0EF;border-radius:10px;padding:12px 14px;font-weight:700;color:#242039;margin:0 0 16px;">${escapeHtml(demoBanner)}</p>`
               : ''
           }
-          <h1 style="font-size:20px;font-weight:800;margin:0 0 12px;color:#242039;">${congrats}</h1>
+          <h1 style="font-size:20px;font-weight:800;margin:0 0 12px;color:#242039;">${congratsHtml}</h1>
           <p style="margin:0 0 18px;line-height:1.5;color:#625D71;">Thank you for completing the three-rooftop Solar Roof Challenge.</p>
           <table role="presentation" width="100%" style="background:#F8F7FC;border-radius:12px;border:1px solid #E5E0EF;">
             ${
@@ -126,26 +163,18 @@ export function buildVoucherEmail(input: VoucherEmailTemplateInput): VoucherEmai
                 ? `<tr><td style="padding:10px 14px;"><strong style="color:#625D71;">Verified stars</strong><br/><span style="font-size:18px;font-weight:800;color:#242039;">${stars} / ${MAX_CAMPAIGN_STARS}</span></td></tr>`
                 : ''
             }
-            <tr><td style="padding:10px 14px;"><strong style="color:#625D71;">Awarded discount</strong><br/><span style="font-size:22px;font-weight:800;color:#ED3363;">${amount}</span></td></tr>
+            <tr><td style="padding:10px 14px;"><strong style="color:#625D71;">Awarded discount</strong><br/><span style="font-size:22px;font-weight:800;color:#ED3363;">${amount} OFF</span></td></tr>
             <tr><td style="padding:10px 14px;"><strong style="color:#625D71;">Voucher code</strong><br/><span style="font-size:20px;letter-spacing:0.06em;font-weight:800;color:#6E3CE2;">${safeCode}</span></td></tr>
-            <tr><td style="padding:10px 14px;"><strong style="color:#625D71;">Expiry</strong><br/>${
-              expires
-                ? escapeHtml(expires)
-                : 'Not applicable — demo codes are not redeemable'
-            }</td></tr>
+            <tr><td style="padding:10px 14px;"><strong style="color:#625D71;">Expiry</strong><br/>${escapeHtml(expiryDisplay)}</td></tr>
           </table>
-          <h2 style="font-size:16px;margin:22px 0 8px;color:#242039;">${isDemo ? 'About this code' : 'Redemption instructions'}</h2>
+          <h2 style="font-size:16px;margin:22px 0 8px;color:#242039;">${isDemo ? 'About this code' : 'How to use your voucher'}</h2>
           <p style="margin:0;line-height:1.5;color:#625D71;">${
             isDemo
               ? 'This code is <strong>not redeemable</strong>. It does not unlock a live Decarby discount and should not be presented for redemption.'
-              : 'Present this code when arranging an eligible Decarby Solar installation quotation. Our team will verify validity, expiry and approved promotional terms.'
+              : 'Present this code to Decarby Solar for verification. Our team will confirm the code and discount amount.'
           }</p>
           <h2 style="font-size:16px;margin:22px 0 8px;color:#242039;">Terms</h2>
-          <p style="margin:0;line-height:1.5;color:#625D71;">Terms reference <strong>${safeTerms}</strong>. ${
-            isDemo
-              ? 'No approved live promotional offer is activated by this test message.'
-              : 'Offer subject to eligibility, availability and Decarby approval. Not transferable for cash.'
-          }</p>
+          <p style="margin:0;line-height:1.5;color:#625D71;">${terms.html}</p>
           <p style="margin:22px 0 0;line-height:1.5;color:#625D71;">Contact: ${contactEmail}<br/>${contactPhone}<br/><a href="https://decarbysolar.com.au/" style="color:#6E3CE2;">decarbysolar.com.au</a></p>
         </td></tr>
       </table>

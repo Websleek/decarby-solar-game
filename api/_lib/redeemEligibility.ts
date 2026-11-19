@@ -5,7 +5,7 @@ export type StaffVoucherView = Readonly<{
   campaignId: string
   rewardTierId: string
   issuedAt: string
-  expiresAt: string
+  expiresAt: string | null
   status: string
   demo: boolean
   redeemable: boolean
@@ -20,6 +20,15 @@ export type StaffDisplayStatus =
   | 'invalid'
   | 'not_redeemable'
 
+function isPastExpiry(expiresAt: string | null | undefined, nowMs: number): boolean {
+  if (expiresAt == null) return false
+  const trimmed = String(expiresAt).trim()
+  if (!trimmed || trimmed === 'null') return false
+  const ms = Date.parse(trimmed)
+  if (Number.isNaN(ms)) return false
+  return ms <= nowMs
+}
+
 export function deriveDisplayStatus(
   voucher: Pick<StaffVoucherView, 'status' | 'expiresAt' | 'demo' | 'redeemable'>,
   nowMs: number = Date.now(),
@@ -27,8 +36,7 @@ export function deriveDisplayStatus(
   if (voucher.status === 'redeemed') return 'redeemed'
   if (voucher.status === 'void') return 'void'
   if (voucher.status === 'expired') return 'expired'
-  const expires = Date.parse(voucher.expiresAt)
-  if (!Number.isNaN(expires) && expires <= nowMs) return 'expired'
+  if (isPastExpiry(voucher.expiresAt, nowMs)) return 'expired'
   if (voucher.demo || !voucher.redeemable) return 'not_redeemable'
   if (voucher.status === 'issued') return 'valid'
   return 'invalid'

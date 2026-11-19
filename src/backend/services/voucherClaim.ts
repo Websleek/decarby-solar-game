@@ -111,7 +111,10 @@ export const voucherClaimService = {
         code: String(payload.code ?? ''),
         amountCents: Number(payload.amountCents ?? 0),
         tierId: String(payload.tierId ?? ''),
-        expiresAt: String(payload.expiresAt ?? ''),
+        expiresAt:
+          payload.expiresAt == null || payload.expiresAt === ''
+            ? null
+            : String(payload.expiresAt),
         demo: payload.demo === true,
         redeemable: payload.redeemable === true,
         issuanceMode: payload.issuanceMode === 'approved_live' ? 'approved_live' : 'demo',

@@ -38,7 +38,8 @@ export type ClaimCampaignVoucherSuccess = Readonly<{
   code: string
   amountCents: number
   tierId: string
-  expiresAt: string
+  /** ISO timestamp, or null when the voucher does not expire. */
+  expiresAt: string | null
   demo: boolean
   redeemable: boolean
   issuanceMode: 'demo' | 'approved_live'

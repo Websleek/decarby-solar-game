@@ -10,6 +10,7 @@ export type VoucherSubmitFormSnapshot = Readonly<{
   phone: string
   email: string
   termsAccepted: boolean
+  adultSelfAttested: boolean
   marketingOptIn?: boolean
 }>
 
@@ -51,7 +52,9 @@ export function evaluateVoucherSubmitReadiness(
     )
   }
   if (campaign.rewardAmountCents <= 0) {
-    blockers.push('No eligible reward is available for this run, so a voucher cannot be claimed.')
+    blockers.push(
+      'Your reward is still unlocking. Finish verification for this completed run, then try again.',
+    )
   }
 
   const campaignReady =
@@ -67,8 +70,7 @@ export function evaluateVoucherSubmitReadiness(
     phone: form.phone,
     email: form.email,
     termsAccepted: form.termsAccepted,
-    // Adult checkbox removed from event UI — do not fabricate attestation.
-    adultSelfAttested: false,
+    adultSelfAttested: form.adultSelfAttested === true,
     marketingOptIn: form.marketingOptIn === true,
     termsVersion: PROMOTIONAL_TERMS_VERSION,
   })

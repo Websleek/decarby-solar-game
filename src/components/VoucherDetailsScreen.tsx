@@ -8,6 +8,7 @@ import {
 } from '../../shared/rewards/emailDeliveryStatus'
 import { evaluateVoucherSubmitReadiness } from '../../shared/rewards/voucherSubmitReadiness'
 import type { ClaimCampaignVoucherResult } from '../../shared/rewards/voucherClaim'
+import { claimFormTermsPresentation } from '../../shared/rewards/promotionalTerms'
 import {
   emptyVoucherClaimForm,
   voucherClaimService,
@@ -47,6 +48,10 @@ export function VoucherDetailsScreen({
   const [result, setResult] = useState<ClaimCampaignVoucherResult | null>(null)
 
   const rewardLabel = view.rewardLabel ?? formatAud(view.rewardAmountCents)
+  const termsPresentation = useMemo(
+    () => claimFormTermsPresentation(voucherClaimService.termsVersion),
+    [],
+  )
 
   useEffect(() => {
     const cached = readCachedClaimResult(view.run.id)
@@ -69,6 +74,7 @@ export function VoucherDetailsScreen({
           phone: form.phone,
           email: form.email,
           termsAccepted: form.termsAccepted,
+          adultSelfAttested: form.adultSelfAttested,
           marketingOptIn: form.marketingOptIn,
         },
       ),
@@ -94,14 +100,15 @@ export function VoucherDetailsScreen({
         alreadyClaimed: false,
         busy: false,
       },
-      {
-        fullName: form.fullName,
-        phone: form.phone,
-        email: form.email,
-        termsAccepted: form.termsAccepted,
-        marketingOptIn: form.marketingOptIn,
-      },
-    )
+        {
+          fullName: form.fullName,
+          phone: form.phone,
+          email: form.email,
+          termsAccepted: form.termsAccepted,
+          adultSelfAttested: form.adultSelfAttested,
+          marketingOptIn: form.marketingOptIn,
+        },
+      )
 
     if (!latest.canSubmit) {
       setError(latest.blockers[0] ?? 'Complete the required fields to send your voucher.')
@@ -113,11 +120,7 @@ export function VoucherDetailsScreen({
     try {
       const response = await voucherClaimService.claim({
         runId: view.run.id,
-        form: {
-          ...form,
-          // Adult checkbox removed — never fabricate attestation.
-          adultSelfAttested: false,
-        },
+        form,
       })
       setResult(response)
       if (response.ok) {
@@ -296,6 +299,17 @@ export function VoucherDetailsScreen({
           />
         </label>
 
+        <label className="voucher-check" htmlFor={`${formId}-adult`}>
+          <input
+            id={`${formId}-adult`}
+            type="checkbox"
+            checked={form.adultSelfAttested}
+            disabled={busy}
+            onChange={(event) => update('adultSelfAttested', event.target.checked)}
+          />
+          <span>{termsPresentation.adultAttestationLabel}</span>
+        </label>
+
         <label className="voucher-check" htmlFor={`${formId}-terms`}>
           <input
             id={`${formId}-terms`}
@@ -305,14 +319,14 @@ export function VoucherDetailsScreen({
             onChange={(event) => update('termsAccepted', event.target.checked)}
           />
           <span>
-            I agree to the Decarby promotional terms ({voucherClaimService.termsVersion}).{' '}
+            I agree to the {termsPresentation.customerLabel}.{' '}
             <a
               className="terms-link"
-              href="https://decarbysolar.com.au/"
+              href={termsPresentation.publicUrl ?? 'https://decarbysolar.com.au/'}
               target="_blank"
               rel="noreferrer"
             >
-              Visit Decarby Solar
+              {termsPresentation.publicUrl ? 'Read the terms' : 'Visit Decarby Solar'}
             </a>
             .
           </span>

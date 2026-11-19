@@ -202,8 +202,8 @@ export function validateVoucherContactForm(
       marketingOptIn: input.marketingOptIn === true,
     },
     expectedTermsVersion,
-    // Event form no longer collects a separate adult checkbox.
-    { requireAdultAttestation: false },
+    // Collect adult self-attestation in the claim form; RPC still enforces for approved_live.
+    { requireAdultAttestation: true },
   )
   if (!consent.ok) {
     return {

@@ -15,7 +15,8 @@ export type PromotionalIssuanceConfig = Readonly<{
   claimsEnabled: boolean
   realRedeemable: boolean
   termsVersion: string
-  voucherTtlDays: number
+  /** Days until expiry for new vouchers. null = non-expiring (expires_at NULL). */
+  voucherTtlDays: number | null
 }>
 
 /** Fail-closed default when config is missing. */
@@ -36,6 +37,16 @@ export const DEMO_SEED_ISSUANCE: PromotionalIssuanceConfig = Object.freeze({
   realRedeemable: false,
   termsVersion: PROMOTIONAL_TERMS_VERSION,
   voucherTtlDays: 90,
+})
+
+/** Intended live launch config (apply only with explicit approval — not auto-applied). */
+export const INTENDED_LIVE_ISSUANCE: PromotionalIssuanceConfig = Object.freeze({
+  campaignId: PROMOTIONAL_CAMPAIGN_ID,
+  mode: 'approved_live',
+  claimsEnabled: true,
+  realRedeemable: true,
+  termsVersion: PROMOTIONAL_TERMS_VERSION,
+  voucherTtlDays: null,
 })
 
 export function isRedeemableIssuance(config: PromotionalIssuanceConfig): boolean {
@@ -80,8 +91,10 @@ export function parseIssuanceConfigRow(row: {
         ? row.terms_version
         : PROMOTIONAL_TERMS_VERSION,
     voucherTtlDays:
-      typeof row.voucher_ttl_days === 'number' && row.voucher_ttl_days > 0
-        ? Math.min(3650, Math.floor(row.voucher_ttl_days))
-        : 90,
+      row.voucher_ttl_days == null
+        ? null
+        : typeof row.voucher_ttl_days === 'number' && row.voucher_ttl_days > 0
+          ? Math.min(3650, Math.floor(row.voucher_ttl_days))
+          : 90,
   }
 }

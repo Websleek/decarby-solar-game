@@ -40,10 +40,9 @@ export type ConsentValidationResult =
     }>
 
 /**
- * Event UX no longer collects a separate adult checkbox.
- * Terms acceptance remains mandatory. Adult attestation is recorded honestly
- * (true only when explicitly provided) and is still required by the claim RPC
- * for approved_live issuance — see migration notes / legal flag.
+ * Terms acceptance remains mandatory and separate from marketing opt-in.
+ * Adult self-attestation is collected via checkbox (not fabricated) and is
+ * required by the claim RPC for approved_live issuance.
  */
 export function validatePromotionalConsentInput(
   input: PromotionalConsentInput,

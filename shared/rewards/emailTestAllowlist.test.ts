@@ -96,5 +96,23 @@ describe('voucher email template demo safety', () => {
     expect(content.html).not.toContain('<script>alert')
     expect(content.text.toLowerCase()).toMatch(/not redeemable/)
     expect(content.html).toMatch(/not applicable|not redeemable/i)
+    expect(content.html).not.toMatch(/promo-terms-v1/)
+  })
+
+  it('shows No expiry on genuine non-expiring vouchers', () => {
+    const content = buildVoucherEmail({
+      fullName: 'Jordan',
+      amountCents: 50000,
+      voucherCode: 'DSR-ZZZZ-YYYY-XXXX',
+      expiresAtIso: null,
+      demo: false,
+      redeemable: true,
+      termsVersion: 'promo-terms-v1',
+    })
+    expect(content.subject).toContain('A$500 OFF')
+    expect(content.html).toContain('No expiry')
+    expect(content.text).toContain('No expiry')
+    expect(content.html).not.toMatch(/TEST \/ DEMO/)
+    expect(content.html).not.toContain('promo-terms-v1')
   })
 })

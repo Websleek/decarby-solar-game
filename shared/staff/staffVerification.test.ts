@@ -93,6 +93,16 @@ describe('redeem eligibility mirrors', () => {
       ),
     ).toBe('expired')
   })
+
+  it('treats null expiresAt as non-expiring valid', () => {
+    expect(
+      deriveDisplayStatus(
+        { ...base, expiresAt: null },
+        Date.parse('2099-01-01T00:00:00.000Z'),
+      ),
+    ).toBe('valid')
+    expect(canOfferRedeem({ ...base, expiresAt: null }, LIVE_GATE)).toBe(true)
+  })
 })
 
 describe('Canberra formatting', () => {
@@ -162,10 +172,15 @@ describe('migration security contracts', () => {
     const { resolve } = await import('node:path')
     const login = readFileSync(resolve(process.cwd(), 'api/staff/login.ts'), 'utf8')
     const env = readFileSync(resolve(process.cwd(), 'api/_lib/env.ts'), 'utf8')
+    const apiPkg = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'api/package.json'), 'utf8'),
+    ) as { type?: string }
     expect(env).toContain('STAFF_PASSWORD_HASH')
     expect(env).not.toContain('VITE_STAFF_PASSWORD')
     expect(login).not.toContain('VITE_STAFF_PASSWORD')
     expect(login).toContain('assertLoginAllowed')
     expect(login).toContain('staffPasswordHash')
+    expect(login).not.toContain('../../shared/')
+    expect(apiPkg.type).toBe('commonjs')
   })
 })

@@ -10,6 +10,7 @@ export type VoucherSubmitFormSnapshot = Readonly<{
   phone: string
   email: string
   termsAccepted: boolean
+  adultSelfAttested: boolean
   marketingOptIn?: boolean
 }>
 
@@ -69,8 +70,7 @@ export function evaluateVoucherSubmitReadiness(
     phone: form.phone,
     email: form.email,
     termsAccepted: form.termsAccepted,
-    // Adult checkbox removed from event UI — do not fabricate attestation.
-    adultSelfAttested: false,
+    adultSelfAttested: form.adultSelfAttested === true,
     marketingOptIn: form.marketingOptIn === true,
     termsVersion: PROMOTIONAL_TERMS_VERSION,
   })

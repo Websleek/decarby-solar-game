@@ -15,6 +15,7 @@ const readyForm = {
   phone: '',
   email: 'jane@example.com',
   termsAccepted: true,
+  adultSelfAttested: true,
 }
 
 describe('evaluateVoucherSubmitReadiness', () => {
@@ -58,10 +59,12 @@ describe('evaluateVoucherSubmitReadiness', () => {
     expect(result.blockers.join(' ')).toMatch(/terms/i)
   })
 
-  it('does not fabricate adult attestation', () => {
-    const result = evaluateVoucherSubmitReadiness(readyCampaign, readyForm)
-    expect(result.canSubmit).toBe(true)
-    // readiness uses adultSelfAttested:false internally; form remains valid
-    expect(result.formReady).toBe(true)
+  it('requires adult self-attestation and never fabricates it', () => {
+    const result = evaluateVoucherSubmitReadiness(readyCampaign, {
+      ...readyForm,
+      adultSelfAttested: false,
+    })
+    expect(result.canSubmit).toBe(false)
+    expect(result.blockers.join(' ')).toMatch(/adult|18/i)
   })
 })
