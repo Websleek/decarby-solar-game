@@ -42,6 +42,15 @@ describe('evaluateVoucherSubmitReadiness', () => {
     expect(result.blockers.join(' ')).toMatch(/not fully server-verified|verification/i)
   })
 
+  it('blocks offline sessions and points players to a new verified challenge', () => {
+    const result = evaluateVoucherSubmitReadiness(
+      { ...readyCampaign, serverBacked: false, serverVerified: false },
+      readyForm,
+    )
+    expect(result.canSubmit).toBe(false)
+    expect(result.blockers.join(' ')).toMatch(/not server-backed|new verified challenge/i)
+  })
+
   it('does not use Not eligible wording for reward blockers', () => {
     const result = evaluateVoucherSubmitReadiness(
       { ...readyCampaign, rewardAmountCents: 0 },

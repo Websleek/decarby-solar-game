@@ -88,7 +88,11 @@ export function CampaignCompleteScreen({
           ) : (
             <ShieldAlert size={16} aria-hidden />
           )}
-          {view.serverVerified ? 'Result verified' : 'Waiting for verification'}
+          {view.serverVerified
+            ? 'Result verified'
+            : view.run.serverBacked
+              ? 'Waiting for verification'
+              : 'Not server-verified'}
         </p>
         <p className="muted promo-eligible-note">{view.voucherEligibleMessaging}</p>
       </div>
@@ -111,13 +115,21 @@ export function CampaignCompleteScreen({
       </div>
 
       <div className="complete-actions">
-        <button type="button" className="btn btn-primary" onClick={onContinuePlaceholder}>
-          <ArrowRight size={16} aria-hidden />
-          Claim Your Reward
-        </button>
+        {view.serverVerified ? (
+          <button type="button" className="btn btn-primary" onClick={onContinuePlaceholder}>
+            <ArrowRight size={16} aria-hidden />
+            Claim Your Reward
+          </button>
+        ) : null}
         {!view.serverVerified && onRetryVerification && (
-          <button type="button" className="btn btn-secondary" onClick={onRetryVerification}>
-            Retry verification
+          <button type="button" className="btn btn-primary" onClick={onRetryVerification}>
+            {view.run.serverBacked ? 'Retry verification' : 'Start new verified challenge'}
+          </button>
+        )}
+        {!view.serverVerified && view.run.serverBacked && (
+          <button type="button" className="btn btn-secondary" onClick={onContinuePlaceholder}>
+            <ArrowRight size={16} aria-hidden />
+            Continue anyway
           </button>
         )}
         <button type="button" className="btn btn-tertiary" onClick={onHome}>

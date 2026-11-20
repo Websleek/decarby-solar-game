@@ -26,9 +26,11 @@ describe('toCampaignCompleteView reward consistency', () => {
     expect(view.totalStars).toBe(
       view.run.levels.reduce((sum, level) => sum + (level.stars ?? 0), 0),
     )
-    expect(view.rewardLabel).toBe('A$50 OFF')
-    expect(view.rewardAmountCents).toBe(5_000)
-    expect(view.nextStepLabel).toBe('Claim Your Reward')
+    // Local-complete (unverified) slots never unlock a claimable reward label.
+    expect(view.rewardLabel).toBeNull()
+    expect(view.rewardAmountCents).toBe(0)
+    expect(view.serverVerified).toBe(false)
+    expect(view.nextStepLabel).toBe('Continue')
     expect(JSON.stringify(view)).not.toMatch(/Not eligible|Keep practising|No promotional tier/i)
   })
 

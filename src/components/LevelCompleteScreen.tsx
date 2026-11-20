@@ -42,7 +42,8 @@ export function LevelCompleteScreen({
   const verifying = onlineSubmission.status === 'submitting'
   const needsRetry =
     eventCampaignMode &&
-    (onlineSubmission.status === 'unable_to_connect' || onlineSubmission.status === 'rejected')
+    (onlineSubmission.status === 'unable_to_connect' ||
+      onlineSubmission.status === 'rejected')
 
   useEffect(() => {
     setShownStars(0)
@@ -65,9 +66,10 @@ export function LevelCompleteScreen({
     (id): id is AchievementId => id in ACHIEVEMENTS,
   )
 
+  // Event campaign: never advance on local-only stars — require server verification.
   const canAdvance =
     result.stars >= 1 &&
-    (eventCampaignMode ? true : nextUnlocked) &&
+    (eventCampaignMode ? onlineSubmission.status === 'verified' : nextUnlocked) &&
     !verifying
 
   return (
@@ -148,7 +150,13 @@ export function LevelCompleteScreen({
           </button>
         ) : (
           <button type="button" className="btn btn-primary" disabled>
-            {verifying ? 'Verifying…' : 'Earn at least 1 star to continue'}
+            {verifying
+              ? 'Verifying…'
+              : eventCampaignMode && needsRetry
+                ? 'Verification required to continue'
+                : eventCampaignMode
+                  ? 'Waiting for verification…'
+                  : 'Earn at least 1 star to continue'}
           </button>
         )}
 

@@ -31,6 +31,9 @@ describe('campaign run factory', () => {
     if (run.reward?.eligible) expect(run.reward.amountCents).toBe(25_000)
     const view = toCampaignCompleteView(run)
     expect(view.serverVerified).toBe(false)
-    expect(view.rewardLabel).toBe('A$250 OFF')
+    // Local estimates must not appear as claimable verified rewards.
+    expect(view.rewardLabel).toBeNull()
+    expect(view.rewardAmountCents).toBe(0)
+    expect(view.totalStars).toBe(8)
   })
 })

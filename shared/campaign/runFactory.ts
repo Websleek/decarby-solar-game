@@ -172,34 +172,43 @@ export function toCampaignCompleteView(run: PromotionalCampaignRun): CampaignCom
   const allLevelsDone = run.levels.every(
     (s) => s.status === 'local_complete' || s.status === 'verified',
   )
+  const allLevelsServerVerified =
+    run.serverBacked && run.levels.every((s) => s.status === 'verified')
 
-  // Prefer the stored decision when eligible; otherwise recompute from this run's
-  // level slots so stars / score / reward stay consistent on the results page.
+  // Authoritative display only from server-verified slots / decisions.
+  // Never promote local-only stars into a claimable reward label.
   let displayReward = run.reward
-  if ((!displayReward || !displayReward.eligible) && allLevelsPresent && allLevelsDone) {
+  if (
+    run.serverBacked &&
+    allLevelsServerVerified &&
+    (!displayReward || !displayReward.eligible) &&
+    allLevelsPresent
+  ) {
     displayReward = evaluateCampaignReward(
       run.levels.map((s) => ({
         levelId: s.levelId,
         verifiedStars: s.stars ?? 0,
         verifiedScore: s.score ?? 0,
-        verifiedRecordId: s.verifiedRecordId ?? `local-${s.levelId}`,
+        verifiedRecordId: s.verifiedRecordId ?? `missing-${s.levelId}`,
         levelVersion: s.levelVersion ?? 1,
       })),
     )
   }
 
-  const totalStars =
-    displayReward && Number.isInteger(displayReward.totalStars)
+  const totalStars = allLevelsServerVerified
+    ? displayReward && Number.isInteger(displayReward.totalStars)
       ? displayReward.totalStars
       : levelStars
-  const totalScore =
-    displayReward && Number.isInteger(displayReward.totalScore)
+    : levelStars
+  const totalScore = allLevelsServerVerified
+    ? displayReward && Number.isInteger(displayReward.totalScore)
       ? displayReward.totalScore
       : levelScore
+    : levelScore
 
   const serverVerified =
     run.serverBacked &&
-    run.levels.every((s) => s.status === 'verified') &&
+    allLevelsServerVerified &&
     run.reward != null &&
     run.reward.eligible === true &&
     !run.provisional
@@ -207,9 +216,12 @@ export function toCampaignCompleteView(run: PromotionalCampaignRun): CampaignCom
   let voucherEligibleMessaging: string
   if (!allLevelsDone) {
     voucherEligibleMessaging = 'Finish all three rooftops to unlock your reward.'
-  } else if (!run.serverBacked || run.provisional || !serverVerified) {
+  } else if (!run.serverBacked) {
     voucherEligibleMessaging =
-      'Your score is ready. Online verification finishes your voucher claim — tap retry if needed.'
+      'This play was not server-verified, so it cannot earn a genuine voucher. Start a new verified challenge when your connection is ready.'
+  } else if (run.provisional || !serverVerified) {
+    voucherEligibleMessaging =
+      'Online verification is still required before you can claim. Tap retry if your connection dropped.'
   } else if (displayReward?.eligible) {
     voucherEligibleMessaging =
       'Thanks for playing the Decarby Solar Roof Challenge. Continue to claim your reward below.'
@@ -217,8 +229,10 @@ export function toCampaignCompleteView(run: PromotionalCampaignRun): CampaignCom
     voucherEligibleMessaging = 'We could not confirm this run yet. Please retry verification.'
   }
 
-  const rewardLabel = displayReward?.eligible ? displayReward.displayLabel : null
-  const rewardAmountCents = displayReward?.eligible ? displayReward.amountCents : 0
+  const rewardLabel =
+    serverVerified && displayReward?.eligible ? displayReward.displayLabel : null
+  const rewardAmountCents =
+    serverVerified && displayReward?.eligible ? displayReward.amountCents : 0
 
   return {
     run,
@@ -229,6 +243,6 @@ export function toCampaignCompleteView(run: PromotionalCampaignRun): CampaignCom
     rewardAmountCents,
     serverVerified,
     voucherEligibleMessaging,
-    nextStepLabel: 'Claim Your Reward',
+    nextStepLabel: serverVerified ? 'Claim Your Reward' : 'Continue',
   }
 }

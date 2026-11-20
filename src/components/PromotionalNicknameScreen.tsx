@@ -1,13 +1,17 @@
 import { useState } from 'react'
-import { ArrowLeft, Play, CloudOff } from 'lucide-react'
+import { ArrowLeft, Play, CloudOff, RefreshCw } from 'lucide-react'
 import { isBackendConfigured, validateNickname } from '../backend'
 import { SoundToggle } from './SoundToggle'
+
+export type PromoStartOutcome =
+  | Readonly<{ ok: true }>
+  | Readonly<{ ok: false; message: string }>
 
 type PromotionalNicknameScreenProps = {
   soundEnabled: boolean
   onToggleSound: () => void
   initialNickname?: string
-  onContinue: (nickname: string, mode: 'online' | 'offline') => void
+  onContinue: (nickname: string, mode: 'online' | 'offline') => Promise<PromoStartOutcome>
   onBack: () => void
 }
 
@@ -32,7 +36,12 @@ export function PromotionalNicknameScreen({
     setBusy(true)
     setMessage(null)
     try {
-      onContinue(validated.nickname, mode)
+      const outcome = await onContinue(validated.nickname, mode)
+      if (!outcome.ok) {
+        setMessage(outcome.message)
+      }
+    } catch {
+      setMessage('Could not start the challenge. Check your connection and try again.')
     } finally {
       setBusy(false)
     }
@@ -63,7 +72,22 @@ export function PromotionalNicknameScreen({
         />
       </label>
 
-      {message && <p className="status-banner">{message}</p>}
+      {message && (
+        <div className="status-banner" role="alert">
+          <p>{message}</p>
+          {onlineReady && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={() => void submit('online')}
+            >
+              <RefreshCw size={16} aria-hidden />
+              Retry connection
+            </button>
+          )}
+        </div>
+      )}
 
       {!onlineReady && (
         <p className="reward-status">
@@ -81,7 +105,7 @@ export function PromotionalNicknameScreen({
             onClick={() => void submit('online')}
           >
             <Play size={18} aria-hidden />
-            Start 3-rooftop challenge
+            {busy ? 'Connecting…' : 'Start 3-rooftop challenge'}
           </button>
         ) : (
           <button

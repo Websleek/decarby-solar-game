@@ -44,7 +44,7 @@ export function evaluateVoucherSubmitReadiness(
   }
   if (!campaign.serverBacked) {
     blockers.push(
-      'This session is offline or not server-backed. Start an online verified challenge to claim.',
+      'This session is offline or not server-backed. Start a new verified challenge to claim — local play cannot earn a genuine voucher.',
     )
   } else if (campaign.provisional || !campaign.serverVerified) {
     blockers.push(

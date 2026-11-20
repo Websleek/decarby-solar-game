@@ -254,7 +254,7 @@ export function VoucherDetailsScreen({
           <p>{readiness.blockers[0]}</p>
           {onRetryVerification && (view.run.provisional || !view.serverVerified) && (
             <button type="button" className="btn btn-secondary" onClick={onRetryVerification}>
-              Retry verification
+              {view.run.serverBacked ? 'Retry verification' : 'Start new verified challenge'}
             </button>
           )}
         </div>

@@ -32,6 +32,7 @@ import {
   isCampaignLevelLocked,
   nextIncompleteCampaignLevelId,
   resolveAttemptCampaignRunId,
+  clearPromoRunDraft,
   readPromoRunDraft,
   writePromoRunDraft,
 } from './services/promoRunCache'
@@ -227,29 +228,39 @@ export default function App() {
   )
 
   const startLevel = useCallback(
-    async (levelId: string, mode: GameMode, options?: { campaignRunId?: string | null }) => {
+    async (
+      levelId: string,
+      mode: GameMode,
+      options?: {
+        campaignRunId?: string | null
+        requireServerAttempt?: boolean
+        /** When starting the first rooftop before React promo state has committed. */
+        promoStarting?: boolean
+      },
+    ): Promise<boolean> => {
       const current = await localProgressService.load()
-      if (promoFlowActive && promoRun && isCampaignLevelLocked(promoRun, levelId)) {
+      const promoActive = promoFlowActive || options?.promoStarting === true
+      if (promoActive && promoRun && isCampaignLevelLocked(promoRun, levelId)) {
         // Completed rooftops are locked for this run — never replay.
         const nextId = nextIncompleteCampaignLevelId(promoRun)
         if (!nextId || nextId === levelId) {
           setScreen('campaignComplete')
-          return
+          return false
         }
         levelId = nextId
       }
-      if (!promoFlowActive && mode === 'classic' && !isLevelUnlocked(current, levelId)) {
+      if (!promoActive && mode === 'classic' && !isLevelUnlocked(current, levelId)) {
         setProgress(current)
         setScreen('welcome')
-        return
+        return false
       }
-      if (!promoFlowActive && mode === 'timeAttack' && !isTimeAttackLevelAvailable(current, levelId)) {
+      if (!promoActive && mode === 'timeAttack' && !isTimeAttackLevelAvailable(current, levelId)) {
         setProgress(current)
         setScreen('welcome')
-        return
+        return false
       }
       const level = getLevelById(levelId)
-      if (!level) return
+      if (!level) return false
 
       if (mode === 'classic') {
         await localProgressService.setSelectedLevel(levelId)
@@ -264,16 +275,30 @@ export default function App() {
       // startLevel before setPromoFlowActive/setPromoRun have re-rendered.
       const runId = resolveAttemptCampaignRunId({
         explicitCampaignRunId: options?.campaignRunId,
-        promoFlowActive,
+        promoFlowActive: promoActive,
         serverBackedRunId: promoRun?.serverBacked ? promoRun.id : null,
       })
+      const requiresServerAttempt =
+        (options?.requireServerAttempt === true || (promoActive && Boolean(runId))) &&
+        isBackendConfigured()
       const session = await maybeStartOnlineAttempt(levelId, mode, runId)
+      if (requiresServerAttempt && !session) {
+        // Never start a rooftop that looks like a verified event run without a live attempt.
+        setOnlineSession(null)
+        setOnlineSubmission({
+          status: 'unable_to_connect',
+          message:
+            'Could not start a verified rooftop attempt. Check your connection and try again.',
+        })
+        return false
+      }
       setOnlineSession(session)
       setEngine(createPuzzleEngine(level, { recordActions: session !== null }))
       setEngineKey((k) => k + 1)
       setResult(null)
       setTimeAttackResult(null)
       setScreen('gameplay')
+      return true
     },
     [maybeStartOnlineAttempt, promoFlowActive, promoRun],
   )
@@ -309,18 +334,55 @@ export default function App() {
   }, [])
 
   const beginPromotionalCampaign = useCallback(
-    async (nickname: string, mode: 'online' | 'offline') => {
+    async (
+      nickname: string,
+      mode: 'online' | 'offline',
+    ): Promise<{ ok: true } | { ok: false; message: string }> => {
       await unlockAudio()
-      const run =
-        mode === 'online'
-          ? await promotionalCampaignService.startServerRun(nickname)
-          : promotionalCampaignService.createOfflineRun(nickname)
+      if (mode === 'offline') {
+        const run = promotionalCampaignService.createOfflineRun(nickname)
+        setPromoRun(run)
+        setPromoFlowActive(true)
+        const first = getFirstLevel()
+        const started = await startLevel(first.id, 'classic', {
+          campaignRunId: null,
+          promoStarting: true,
+        })
+        if (!started) {
+          setPromoRun(null)
+          setPromoFlowActive(false)
+          return {
+            ok: false,
+            message: 'Could not start the local demo. Please try again.',
+          }
+        }
+        return { ok: true }
+      }
+
+      const startedRun = await promotionalCampaignService.startServerRun(nickname)
+      if (!startedRun.ok) {
+        return { ok: false, message: startedRun.message }
+      }
+      const run = startedRun.run
       setPromoRun(run)
       setPromoFlowActive(true)
       const first = getFirstLevel()
-      await startLevel(first.id, 'classic', {
-        campaignRunId: run.serverBacked ? run.id : null,
+      const startedLevel = await startLevel(first.id, 'classic', {
+        campaignRunId: run.id,
+        requireServerAttempt: true,
+        promoStarting: true,
       })
+      if (!startedLevel) {
+        setPromoRun(null)
+        setPromoFlowActive(false)
+        clearPromoRunDraft()
+        return {
+          ok: false,
+          message:
+            'Verified challenge started, but the first rooftop could not connect. Tap Retry connection.',
+        }
+      }
+      return { ok: true }
     },
     [startLevel],
   )
@@ -349,14 +411,30 @@ export default function App() {
             : current,
         )
       }
+      if (promoFlowActive && promoRun?.serverBacked && !onlineSession) {
+        setOnlineSubmission({
+          status: 'unable_to_connect',
+          message:
+            'This rooftop finished without a verified online attempt. Retry verification before continuing.',
+        })
+      } else if (promoFlowActive && promoRun?.serverBacked && onlineSession) {
+        // Mark submitting before paint so event mode cannot advance on idle.
+        setOnlineSubmission({ status: 'submitting' })
+        void submitOnlineIfNeeded(onlineSession, engine, {
+          score: levelResult.score,
+          durationMs: levelResult.durationMs,
+          coveragePercent: levelResult.coveragePercent,
+        })
+      } else {
+        void submitOnlineIfNeeded(onlineSession, engine, {
+          score: levelResult.score,
+          durationMs: levelResult.durationMs,
+          coveragePercent: levelResult.coveragePercent,
+        })
+      }
       setScreen('levelComplete')
-      void submitOnlineIfNeeded(onlineSession, engine, {
-        score: levelResult.score,
-        durationMs: levelResult.durationMs,
-        coveragePercent: levelResult.coveragePercent,
-      })
     },
-    [engine, onlineSession, promoFlowActive, submitOnlineIfNeeded],
+    [engine, onlineSession, promoFlowActive, promoRun, submitOnlineIfNeeded],
   )
 
   const openCampaignComplete = useCallback(async () => {
@@ -458,6 +536,14 @@ export default function App() {
 
   const retryCampaignVerification = useCallback(async () => {
     if (!promoRun) return
+    if (!promoRun.serverBacked) {
+      // Local/offline completion cannot be upgraded into a genuine voucher run.
+      clearPromoRunDraft()
+      setPromoRun(null)
+      setPromoFlowActive(false)
+      setScreen('promoNickname')
+      return
+    }
     const evaluated = await promotionalCampaignService.evaluateServer(promoRun)
     setPromoRun(evaluated)
   }, [promoRun])
@@ -504,7 +590,7 @@ export default function App() {
           soundEnabled={soundEnabled}
           onToggleSound={() => void toggleSound()}
           initialNickname=""
-          onContinue={(nickname, mode) => void beginPromotionalCampaign(nickname, mode)}
+          onContinue={(nickname, mode) => beginPromotionalCampaign(nickname, mode)}
           onBack={() => setScreen('welcome')}
         />
       )}

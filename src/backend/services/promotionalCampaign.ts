@@ -25,6 +25,14 @@ async function invokeFunction<T>(name: string, body: Record<string, unknown>): P
   return data as T
 }
 
+export type StartServerRunResult =
+  | Readonly<{ ok: true; run: PromotionalCampaignRun }>
+  | Readonly<{ ok: false; code: string; message: string }>
+
+function startFailure(code: string, message: string): StartServerRunResult {
+  return { ok: false, code, message }
+}
+
 export const promotionalCampaignService = {
   createOfflineRun(nickname: string | null): PromotionalCampaignRun {
     return createLocalCampaignRun({
@@ -34,9 +42,17 @@ export const promotionalCampaignService = {
     })
   },
 
-  async startServerRun(nickname: string): Promise<PromotionalCampaignRun> {
+  /**
+   * Start a server-backed promotional run.
+   * Never silently falls back to offline play when the backend is configured —
+   * callers must block gameplay and show Retry connection.
+   */
+  async startServerRun(nickname: string): Promise<StartServerRunResult> {
     if (!isBackendConfigured()) {
-      return this.createOfflineRun(nickname)
+      return startFailure(
+        'not_configured',
+        'Online verification is unavailable on this device. A local demo cannot earn a genuine voucher.',
+      )
     }
     try {
       await profileService.upsertMyNickname(nickname)
@@ -49,23 +65,28 @@ export const promotionalCampaignService = {
         code?: string
       }>('start-campaign-run', {})
       if (!payload?.ok || !payload.runId) {
-        // Migration / function not deployed — continue with local provisional run.
-        return createLocalCampaignRun({
-          id: crypto.randomUUID(),
-          nickname,
-          playerId: profile?.id ?? null,
-          serverBacked: false,
-        })
+        return startFailure(
+          payload?.code ?? 'start_campaign_failed',
+          payload?.message ??
+            'Could not start a verified challenge. Check your connection and try again.',
+        )
       }
-      return createLocalCampaignRun({
-        id: payload.runId,
-        nickname: profile?.publicNickname ?? nickname,
-        playerId: profile?.id ?? null,
-        serverBacked: true,
-        nowIso: payload.createdAt,
-      })
-    } catch {
-      return this.createOfflineRun(nickname)
+      return {
+        ok: true,
+        run: createLocalCampaignRun({
+          id: payload.runId,
+          nickname: profile?.publicNickname ?? nickname,
+          playerId: profile?.id ?? null,
+          serverBacked: true,
+          nowIso: payload.createdAt,
+        }),
+      }
+    } catch (error) {
+      const mapped = toBackendError(
+        error,
+        'Could not start a verified challenge. Check your connection and try again.',
+      )
+      return startFailure(mapped.code, mapped.message)
     }
   },
 
@@ -103,7 +124,8 @@ export const promotionalCampaignService = {
 
   async evaluateServer(run: PromotionalCampaignRun): Promise<PromotionalCampaignRun> {
     if (!run.serverBacked || !isBackendConfigured()) {
-      return finalizeCampaignReward(run)
+      // Offline / non-server runs cannot become claim-eligible via local finalize.
+      return finalizeCampaignReward({ ...run, provisional: true })
     }
     try {
       const payload = await invokeFunction<{
@@ -118,7 +140,7 @@ export const promotionalCampaignService = {
         message?: string
       }>('evaluate-campaign-run', { runId: run.id })
       if (!payload?.ok || !payload.decision) {
-        return finalizeCampaignReward(run)
+        return finalizeCampaignReward({ ...run, provisional: true })
       }
       if (payload.voucherIssued === true) {
         throw new BackendError('unsupported', 'Unexpected voucher issuance in Final A.')
