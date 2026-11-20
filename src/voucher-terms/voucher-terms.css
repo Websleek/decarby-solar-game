@@ -1,0 +1,133 @@
+:root {
+  --vt-ink: #242039;
+  --vt-muted: #625d71;
+  --vt-paper: #f8f7fc;
+  --vt-card: #ffffff;
+  --vt-line: #e5e0ef;
+  --vt-accent: #ed3363;
+  --vt-violet: #6e3ce2;
+  --vt-font: 'Nunito', 'Trebuchet MS', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(237, 51, 99, 0.12), transparent 60%),
+    radial-gradient(900px 420px at 100% 0%, rgba(110, 60, 226, 0.14), transparent 55%),
+    var(--vt-paper);
+  color: var(--vt-ink);
+  font-family: var(--vt-font);
+}
+
+.voucher-terms {
+  width: min(720px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2.5rem 0 3.5rem;
+}
+
+.voucher-terms__brand {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vt-violet);
+}
+
+.voucher-terms__brand span {
+  color: var(--vt-accent);
+}
+
+.voucher-terms h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+  line-height: 1.15;
+}
+
+.voucher-terms__promoter {
+  margin: 0 0 1.75rem;
+  color: var(--vt-muted);
+}
+
+.voucher-terms__section {
+  margin: 0 0 1.75rem;
+  padding: 1.25rem 1.35rem;
+  background: var(--vt-card);
+  border: 1px solid var(--vt-line);
+  border-radius: 16px;
+}
+
+.voucher-terms h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+}
+
+.voucher-terms__section > p {
+  margin: 0 0 1rem;
+  line-height: 1.55;
+  color: var(--vt-muted);
+}
+
+.voucher-terms__table-wrap {
+  overflow-x: auto;
+}
+
+.voucher-terms__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.98rem;
+}
+
+.voucher-terms__table th,
+.voucher-terms__table td {
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid var(--vt-line);
+  text-align: left;
+}
+
+.voucher-terms__table th {
+  color: var(--vt-muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.voucher-terms__table td:last-child {
+  font-weight: 800;
+  color: var(--vt-accent);
+}
+
+.voucher-terms__list {
+  margin: 0;
+  padding-left: 1.25rem;
+  line-height: 1.55;
+  color: var(--vt-muted);
+}
+
+.voucher-terms__list li + li {
+  margin-top: 0.55rem;
+}
+
+.voucher-terms__contact,
+.voucher-terms__note,
+.voucher-terms__back {
+  margin: 0 0 0.85rem;
+  line-height: 1.5;
+  color: var(--vt-muted);
+}
+
+.voucher-terms__contact a,
+.voucher-terms__back a {
+  color: var(--vt-violet);
+  font-weight: 700;
+}
+
+.voucher-terms__note {
+  font-size: 0.92rem;
+}

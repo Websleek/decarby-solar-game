@@ -53,10 +53,11 @@ function customerTermsBlock(termsVersion: string, isDemo: boolean): {
     }
   }
   const terms = resolvePromotionalTerms(termsVersion)
-  const label = terms?.customerLabel ?? 'Decarby Solar Roof Challenge Promotional Terms'
+  const label = terms?.customerLabel ?? 'Decarby Solar Roof Challenge Voucher Terms'
   const summary =
     terms?.emailTermsSummary ??
-    'Present this code to Decarby Solar for verification. Offer subject to promotional terms. Not transferable for cash.'
+    'Present this code to Decarby Solar when arranging a purchase or service. Not exchangeable for cash.'
+  // Emails only link absolute https URLs (in-app paths are not useful in inboxes).
   const url =
     terms?.publishedForCustomers === true &&
     typeof terms.publicUrl === 'string' &&

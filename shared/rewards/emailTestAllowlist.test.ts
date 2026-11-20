@@ -114,5 +114,7 @@ describe('voucher email template demo safety', () => {
     expect(content.text).toContain('No expiry')
     expect(content.html).not.toMatch(/TEST \/ DEMO/)
     expect(content.html).not.toContain('promo-terms-v1')
+    expect(content.html).toContain('https://decarby-solar-game.vercel.app/voucher-terms/')
+    expect(content.text).toContain('https://decarby-solar-game.vercel.app/voucher-terms/')
   })
 })

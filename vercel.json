@@ -8,8 +8,10 @@
   "rewrites": [
     { "source": "/code", "destination": "/code/index.html" },
     { "source": "/code/", "destination": "/code/index.html" },
+    { "source": "/voucher-terms", "destination": "/voucher-terms/index.html" },
+    { "source": "/voucher-terms/", "destination": "/voucher-terms/index.html" },
     {
-      "source": "/((?!api(?:/|$)|code(?:/|$)|assets(?:/|$)|favicon\\.svg|.*\\..*).*)",
+      "source": "/((?!api(?:/|$)|code(?:/|$)|voucher-terms(?:/|$)|assets(?:/|$)|favicon\\.svg|.*\\..*).*)",
       "destination": "/index.html"
     }
   ],

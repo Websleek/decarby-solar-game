@@ -10,6 +10,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         code: resolve(__dirname, 'code/index.html'),
+        voucherTerms: resolve(__dirname, 'voucher-terms/index.html'),
       },
     },
   },

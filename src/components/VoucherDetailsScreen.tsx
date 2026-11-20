@@ -331,11 +331,11 @@ export function VoucherDetailsScreen({
             I agree to the {termsPresentation.customerLabel}.{' '}
             <a
               className="terms-link"
-              href={termsPresentation.publicUrl ?? 'https://decarbysolar.com.au/'}
+              href={termsPresentation.href ?? 'https://decarbysolar.com.au/'}
               target="_blank"
               rel="noreferrer"
             >
-              {termsPresentation.publicUrl ? 'Read the terms' : 'Visit Decarby Solar'}
+              {termsPresentation.href ? 'Read the terms' : 'Visit Decarby Solar'}
             </a>
             .
           </span>
